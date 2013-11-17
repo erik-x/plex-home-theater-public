@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2007-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2007-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #include "system.h"
 #include "utils/StdString.h"
+#include "utils/StringUtils.h"
 #include "input/XBMC_keysym.h"
 #include "input/XBMC_vkeys.h"
 #include "input/XBMC_keytable.h"
@@ -222,6 +223,7 @@ static const XBMCKEYTABLE XBMCKeyTable[] =
 , { XBMCK_SCROLLOCK,              0,    0, XBMCVK_SCROLLLOCK,    "scrolllock" }
 , { XBMCK_PRINT,                  0,    0, XBMCVK_PRINTSCREEN,   "printscreen" }
 , { XBMCK_POWER,                  0,    0, XBMCVK_POWER,         "power" }
+, { XBMCK_SLEEP,                  0,    0, XBMCVK_SLEEP,         "sleep" }
 };
 
 static int XBMCKeyTableSize = sizeof(XBMCKeyTable)/sizeof(XBMCKEYTABLE);
@@ -236,7 +238,7 @@ bool KeyTableLookupName(const char* keyname, XBMCKEYTABLE* keytable)
 
   // We need the button name to be in lowercase
   CStdString lkeyname = keyname;
-  lkeyname.ToLower();
+  StringUtils::ToLower(lkeyname);
 
   // Look up the key name in XBMCKeyTable
   for (int i = 0; i < XBMCKeyTableSize; i++)

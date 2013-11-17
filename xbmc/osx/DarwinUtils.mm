@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2010-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2010-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@
   #import <sys/sysctl.h>
 #else
   #import <Cocoa/Cocoa.h>
+  #import <CoreFoundation/CoreFoundation.h>
   #import <IOKit/ps/IOPowerSources.h>
   #import <IOKit/ps/IOPSKeys.h>
 #endif
@@ -42,52 +43,155 @@
 #import "AutoPool.h"
 #import "DarwinUtils.h"
 
-bool SysctlMatches(std::string key, std::string searchValue)
+enum iosPlatform
 {
-  int result = -1;
-#if defined(TARGET_DARWIN_IOS)
-  char        buffer[512];
-  size_t      len = 512;
-  result = 0;
+  iDeviceUnknown = -1,
+  iPhone2G,
+  iPhone3G,
+  iPhone3GS,
+  iPodTouch1G,
+  iPodTouch2G,
+  iPodTouch3G,
+  iPad,
+  iPad3G,
+  iPad2WIFI,
+  iPad2CDMA,
+  iPad2,
+  iPadMini,
+  iPadMiniGSMCDMA,
+  iPadMiniWIFI,
+  AppleTV2,
+  iPhone4,            //from here on list devices with retina support (e.x. mainscreen scale == 2.0)
+  iPhone4CDMA,
+  iPhone4S,
+  iPhone5,
+  iPhone5GSMCDMA, 
+  iPhone5CGSM,
+  iPhone5CGlobal,
+  iPhone5SGSM,
+  iPhone5SGlobal,
+  iPodTouch4G,
+  iPodTouch5G,  
+  iPad3WIFI,
+  iPad3GSMCDMA,
+  iPad3,
+  iPad4WIFI,
+  iPad4,
+  iPad4GSMCDMA,  
+};
 
-  if (sysctlbyname(key.c_str(), &buffer, &len, NULL, 0) == 0)
-    key = buffer;
+// platform strings are based on http://theiphonewiki.com/wiki/Models
+enum iosPlatform getIosPlatform()
+{
+#if defined(TARGET_DARWIN_IOS)
+  // Gets a string with the device model
+  size_t size;  
+  sysctlbyname("hw.machine", NULL, &size, NULL, 0);  
+  char *machine = new char[size];  
+  sysctlbyname("hw.machine", machine, &size, NULL, 0);  
+  NSString *platform = [NSString stringWithCString:machine encoding:NSUTF8StringEncoding];  
+  delete [] machine; 
   
-  if (key.find(searchValue) != std::string::npos)
-    result = 1;   
+  if ([platform isEqualToString:@"iPhone1,1"])    return iPhone2G;
+  if ([platform isEqualToString:@"iPhone1,2"])    return iPhone3G;
+  if ([platform isEqualToString:@"iPhone2,1"])    return iPhone3GS;
+  if ([platform isEqualToString:@"iPhone3,1"])    return iPhone4;
+  if ([platform isEqualToString:@"iPhone3,2"])    return iPhone4;
+  if ([platform isEqualToString:@"iPhone3,3"])    return iPhone4CDMA;    
+  if ([platform isEqualToString:@"iPhone4,1"])    return iPhone4S;
+  if ([platform isEqualToString:@"iPhone5,1"])    return iPhone5;
+  if ([platform isEqualToString:@"iPhone5,2"])    return iPhone5GSMCDMA;
+  if ([platform isEqualToString:@"iPhone5,3"])    return iPhone5CGSM;
+  if ([platform isEqualToString:@"iPhone5,4"])    return iPhone5CGlobal;
+  if ([platform isEqualToString:@"iPhone6,1"])    return iPhone5SGSM;
+  if ([platform isEqualToString:@"iPhone6,2"])    return iPhone5SGlobal;
+  
+  if ([platform isEqualToString:@"iPod1,1"])      return iPodTouch1G;
+  if ([platform isEqualToString:@"iPod2,1"])      return iPodTouch2G;
+  if ([platform isEqualToString:@"iPod3,1"])      return iPodTouch3G;
+  if ([platform isEqualToString:@"iPod4,1"])      return iPodTouch4G;
+  if ([platform isEqualToString:@"iPod5,1"])      return iPodTouch5G;
+  
+  if ([platform isEqualToString:@"iPad1,1"])      return iPad;
+  if ([platform isEqualToString:@"iPad1,2"])      return iPad;
+  if ([platform isEqualToString:@"iPad2,1"])      return iPad2WIFI;
+  if ([platform isEqualToString:@"iPad2,2"])      return iPad2;
+  if ([platform isEqualToString:@"iPad2,3"])      return iPad2CDMA;
+  if ([platform isEqualToString:@"iPad2,4"])      return iPad2;
+  if ([platform isEqualToString:@"iPad2,5"])      return iPadMiniWIFI;
+  if ([platform isEqualToString:@"iPad2,6"])      return iPadMini;
+  if ([platform isEqualToString:@"iPad2,7"])      return iPadMiniGSMCDMA;
+  if ([platform isEqualToString:@"iPad3,1"])      return iPad3WIFI;
+  if ([platform isEqualToString:@"iPad3,2"])      return iPad3GSMCDMA;
+  if ([platform isEqualToString:@"iPad3,3"])      return iPad3;
+  if ([platform isEqualToString:@"iPad3,4"])      return iPad4WIFI;
+  if ([platform isEqualToString:@"iPad3,5"])      return iPad4;
+  if ([platform isEqualToString:@"iPad3,6"])      return iPad4GSMCDMA;
+  if ([platform isEqualToString:@"AppleTV2,1"])   return AppleTV2;
 #endif
-  return result;
+  return iDeviceUnknown;
 }
 
 bool DarwinIsAppleTV2(void)
 {
-  static int result = -1;
+  static enum iosPlatform platform = iDeviceUnknown;
 #if defined(TARGET_DARWIN_IOS)
-  if( result == -1 )
+  if( platform == iDeviceUnknown )
   {
-    result = SysctlMatches("hw.machine", "AppleTV2,1");
+    platform = getIosPlatform();
   }
 #endif
-  return (result == 1);
+  return (platform == AppleTV2);
 }
 
-bool DarwinIsIPad3(void)
+bool DarwinIsMavericks(void)
 {
-  static int result = -1;
-#if defined(TARGET_DARWIN_IOS)
-  if( result == -1 )
+  static int isMavericks = -1;
+#if defined(TARGET_DARWIN_OSX)
+  // there is no NSAppKitVersionNumber10_9 out there anywhere
+  // so we detect mavericks by one of these newly added app nap
+  // methods - and fix the ugly mouse rect problem which was hitting
+  // us when mavericks came out
+  if (isMavericks == -1)
   {
-    //valid ipad3 identifiers - iPad3,1 iPad3,2 and iPad3,3
-    //taken from http://stackoverflow.com/questions/9638970/ios-the-new-ipad-uidevicehardware-hw-machine-codename
-    result = SysctlMatches("hw.machine", "iPad3");
+    CLog::Log(LOGDEBUG, "Detected Mavericks...");
+    isMavericks = [NSProcessInfo instancesRespondToSelector:@selector(beginActivityWithOptions:reason:)] == TRUE ? 1 : 0;
   }
 #endif
-  return (result == 1);
+  return isMavericks == 1;
 }
 
+bool DarwinHasRetina(void)
+{
+  static enum iosPlatform platform = iDeviceUnknown;
+
+#if defined(TARGET_DARWIN_IOS)
+  if( platform == iDeviceUnknown )
+  {
+    platform = getIosPlatform();
+  }
+#endif
+  return (platform >= iPhone4);
+}
+
+const char *GetDarwinOSReleaseString(void)
+{
+  static std::string osreleaseStr;
+  if (osreleaseStr.empty())
+  {
+    size_t size;
+    sysctlbyname("kern.osrelease", NULL, &size, NULL, 0);
+    char *osrelease = new char[size];
+    sysctlbyname("kern.osrelease", osrelease, &size, NULL, 0);
+    osreleaseStr = osrelease;
+    delete [] osrelease;
+  }
+  return osreleaseStr.c_str();
+}
 
 const char *GetDarwinVersionString(void)
 {
+  CCocoaAutoPool pool;
   return [[[NSProcessInfo processInfo] operatingSystemVersionString] UTF8String];
 }
 
@@ -114,7 +218,7 @@ int  GetDarwinFrameworkPath(bool forPython, char* path, uint32_t *pathsize)
   *pathsize = 0;
 
   // a) XBMC frappliance running under ATV2
-  Class XBMCfrapp = NSClassFromString(@"XBMCAppliance");
+  Class XBMCfrapp = NSClassFromString(@"XBMCATV2Detector");
   if (XBMCfrapp != NULL)
   {
     pathname = [[NSBundle bundleForClass:XBMCfrapp] pathForResource:@"Frameworks" ofType:@""];
@@ -171,7 +275,7 @@ int  GetDarwinExecutablePath(char* path, uint32_t *pathsize)
   NSString *pathname;
 
   // a) XBMC frappliance running under ATV2
-  Class XBMCfrapp = NSClassFromString(@"XBMCAppliance");
+  Class XBMCfrapp = NSClassFromString(@"XBMCATV2Detector");
   if (XBMCfrapp != NULL)
   {
     pathname = [[NSBundle bundleForClass:XBMCfrapp] pathForResource:@"XBMC" ofType:@""];
@@ -191,13 +295,58 @@ int  GetDarwinExecutablePath(char* path, uint32_t *pathsize)
   return 0;
 }
 
+const char* DarwinGetXbmcRootFolder(void)
+{
+  static std::string rootFolder = "";
+  if ( rootFolder.length() == 0)
+  {
+    if (DarwinIsIosSandboxed())
+    {
+      // when we are sandbox make documents our root
+      // so that user can access everything he needs 
+      // via itunes sharing
+      rootFolder = "Documents";
+    }
+    else
+    {
+      rootFolder = "Library/Preferences";
+    }
+  }
+  return rootFolder.c_str();
+}
+
+bool DarwinIsIosSandboxed(void)
+{
+  static int ret = -1;
+  if (ret == -1)
+  {
+    uint32_t path_size = 2*MAXPATHLEN;
+    char     given_path[2*MAXPATHLEN];
+    int      result = -1; 
+    ret = 0;
+    memset(given_path, 0x0, path_size);
+    /* Get Application directory */  
+    result = GetDarwinExecutablePath(given_path, &path_size);
+    if (result == 0)
+    {
+      // we re sandboxed if we are installed in /var/mobile/Applications
+      if (strlen("/var/mobile/Applications/") < path_size &&
+        strncmp(given_path, "/var/mobile/Applications/", strlen("/var/mobile/Applications/")) == 0)
+      {
+        ret = 1;
+      }
+    }
+  }
+  return ret == 1;
+}
+
 bool DarwinHasVideoToolboxDecoder(void)
 {
   static int DecoderAvailable = -1;
 
   if (DecoderAvailable == -1)
   {
-    Class XBMCfrapp = NSClassFromString(@"XBMCAppliance");
+    Class XBMCfrapp = NSClassFromString(@"XBMCATV2Detector");
     if (XBMCfrapp != NULL)
     {
       // atv2 has seatbelt profile key removed so nothing to do here
@@ -205,49 +354,29 @@ bool DarwinHasVideoToolboxDecoder(void)
     }
     else
     {
-      /* Get Application directory */
-      uint32_t path_size = 2*MAXPATHLEN;
-      char     given_path[2*MAXPATHLEN];
-      int      result = -1;
-      
-      memset(given_path, 0x0, path_size);
-      result = GetDarwinExecutablePath(given_path, &path_size);
-      if (result == 0) 
+      /* When XBMC is started from a sandbox directory we have to check the sysctl values */      
+      if (DarwinIsIosSandboxed())
       {
-        /* When XBMC is started from a sandbox directory we have to check the sysctl values */
-        if (strlen("/var/mobile/Applications/") < path_size &&
-           strncmp(given_path, "/var/mobile/Applications/", strlen("/var/mobile/Applications/")) == 0)
-        {
+        uint64_t proc_enforce = 0;
+        uint64_t vnode_enforce = 0; 
+        size_t size = sizeof(vnode_enforce);
 
-          uint64_t proc_enforce = 0;
-          uint64_t vnode_enforce = 0; 
-          size_t size = sizeof(vnode_enforce);
-          
-          sysctlbyname("security.mac.proc_enforce",  &proc_enforce,  &size, NULL, 0);  
-          sysctlbyname("security.mac.vnode_enforce", &vnode_enforce, &size, NULL, 0);
-          
-          if (vnode_enforce && proc_enforce)
-          {
-            DecoderAvailable = 0;
-            CLog::Log(LOGINFO, "VideoToolBox decoder not available. Use : sysctl -w security.mac.proc_enforce=0; sysctl -w security.mac.vnode_enforce=0\n");
-            //NSLog(@"%s VideoToolBox decoder not available. Use : sysctl -w security.mac.proc_enforce=0; sysctl -w security.mac.vnode_enforce=0", __PRETTY_FUNCTION__);
-          }
-          else
-          {
-            DecoderAvailable = 1;
-            CLog::Log(LOGINFO, "VideoToolBox decoder available\n");
-            //NSLog(@"%s VideoToolBox decoder available", __PRETTY_FUNCTION__);
-          }  
+        sysctlbyname("security.mac.proc_enforce",  &proc_enforce,  &size, NULL, 0);  
+        sysctlbyname("security.mac.vnode_enforce", &vnode_enforce, &size, NULL, 0);
+
+        if (vnode_enforce && proc_enforce)
+        {
+          DecoderAvailable = 1;
+          CLog::Log(LOGINFO, "VideoToolBox decoder not available. Use : sysctl -w security.mac.proc_enforce=0; sysctl -w security.mac.vnode_enforce=0\n");
         }
         else
         {
           DecoderAvailable = 1;
-        }
-        //NSLog(@"%s Executable path %s", __PRETTY_FUNCTION__, given_path);
+          CLog::Log(LOGINFO, "VideoToolBox decoder available\n");
+        }  
       }
       else
       {
-        // In theory this case can never happen. But who knows.
         DecoderAvailable = 1;
       }
     }
@@ -285,7 +414,7 @@ int DarwinBatteryLevel(void)
     powerSourceVal = CFDictionaryGetValue(powerSource, CFSTR(kIOPSMaxCapacityKey));
     CFNumberGetValue((CFNumberRef)powerSourceVal, kCFNumberSInt32Type, &maxLevel);
 
-    batteryLevel = (int)((double)curLevel/(double)maxLevel);
+    batteryLevel = (double)curLevel/(double)maxLevel;
   }
 #endif
   return batteryLevel * 100;  
@@ -302,7 +431,7 @@ void DarwinSetScheduling(int message)
   policy = SCHED_OTHER;
   thread_extended_policy_data_t theFixedPolicy={true};
 
-  if (message == GUI_MSG_PLAYBACK_STARTED && g_application.IsPlayingVideo())
+  if (message == GUI_MSG_PLAYBACK_STARTED && g_application.m_pPlayer->IsPlayingVideo())
   {
     policy = SCHED_RR;
     theFixedPolicy.timeshare = false;
@@ -314,6 +443,44 @@ void DarwinSetScheduling(int message)
     THREAD_EXTENDED_POLICY_COUNT);
 
   result = pthread_setschedparam(this_pthread_self, policy, &param );
+}
+
+bool DarwinCFStringRefToStringWithEncoding(CFStringRef source, std::string &destination, CFStringEncoding encoding)
+{
+  const char *cstr = CFStringGetCStringPtr(source, encoding);
+  if (!cstr)
+  {
+    CFIndex strLen = CFStringGetMaximumSizeForEncoding(CFStringGetLength(source) + 1,
+                                                       encoding);
+    char *allocStr = (char*)malloc(strLen);
+
+    if(!allocStr)
+      return false;
+
+    if(!CFStringGetCString(source, allocStr, strLen, encoding))
+    {
+      free((void*)allocStr);
+      return false;
+    }
+
+    destination = allocStr;
+    free((void*)allocStr);
+
+    return true;
+  }
+
+  destination = cstr;
+  return true;
+}
+
+bool DarwinCFStringRefToString(CFStringRef source, std::string &destination)
+{
+  return DarwinCFStringRefToStringWithEncoding(source, destination, CFStringGetSystemEncoding());
+}
+
+bool DarwinCFStringRefToUTF8String(CFStringRef source, std::string &destination)
+{
+  return DarwinCFStringRefToStringWithEncoding(source, destination, kCFStringEncodingUTF8);
 }
 
 #endif

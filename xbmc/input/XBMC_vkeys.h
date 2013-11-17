@@ -12,9 +12,9 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
     Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU General Public License
+    along with XBMC; see the file COPYING.  If not, see
+    <http://www.gnu.org/licenses/>.
 
     Sam Lantinga
     slouken@libsdl.org
@@ -205,6 +205,7 @@ typedef enum {
   XBMCVK_SCROLLLOCK     = 0xDC,
   XBMCVK_PAUSE          = 0XDD,
   XBMCVK_POWER          = 0XDE,
+  XBMCVK_SLEEP          = 0XDF,
 
   XBMCVK_LAST           = 0xFF
 } XBMCVKey;

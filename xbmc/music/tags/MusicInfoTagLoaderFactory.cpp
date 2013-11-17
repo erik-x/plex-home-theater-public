@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 #include "MusicInfoTagLoaderDatabase.h"
 #include "MusicInfoTagLoaderASAP.h"
 #include "MusicInfoTagLoaderMidi.h"
-
+#include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "FileItem.h"
 
@@ -59,12 +59,11 @@ IMusicInfoTagLoader* CMusicInfoTagLoaderFactory::CreateLoader(const CStdString& 
   if (item.IsMusicDb())
     return new CMusicInfoTagLoaderDatabase();
 
-  CStdString strExtension;
-  URIUtils::GetExtension( strFileName, strExtension);
-  strExtension.ToLower();
-  strExtension.TrimLeft('.');
+  CStdString strExtension = URIUtils::GetExtension(strFileName);
+  StringUtils::ToLower(strExtension);
+  StringUtils::TrimLeft(strExtension, ".");
 
-  if (strExtension.IsEmpty())
+  if (strExtension.empty())
     return NULL;
 
   if (strExtension == "aac" ||

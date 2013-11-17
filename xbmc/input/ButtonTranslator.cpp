@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,9 +21,10 @@
 #include "system.h"
 #include "interfaces/Builtins.h"
 #include "ButtonTranslator.h"
+#include "profiles/ProfilesManager.h"
 #include "utils/URIUtils.h"
-#include "settings/Settings.h"
 #include "guilib/Key.h"
+#include "guilib/WindowIDs.h"
 #include "input/XBMC_keysym.h"
 #include "input/XBMC_keytable.h"
 #include "filesystem/File.h"
@@ -39,6 +40,8 @@
 #elif defined(HAS_SDL_JOYSTICK) || defined(HAS_EVENT_SERVER)
 #include "SDLJoystick.h"
 #endif
+
+#define JOYSTICK_DEFAULT_MAP "_xbmc_"
 
 using namespace std;
 using namespace XFILE;
@@ -80,6 +83,8 @@ static const ActionMapping actions[] =
         {"stepback"          , ACTION_STEP_BACK},
         {"bigstepforward"    , ACTION_BIG_STEP_FORWARD},
         {"bigstepback"       , ACTION_BIG_STEP_BACK},
+        {"chapterorbigstepforward", ACTION_CHAPTER_OR_BIG_STEP_FORWARD},
+        {"chapterorbigstepback"   , ACTION_CHAPTER_OR_BIG_STEP_BACK},
         {"osd"               , ACTION_SHOW_OSD},
         {"showsubtitles"     , ACTION_SHOW_SUBTITLES},
         {"nextsubtitle"      , ACTION_NEXT_SUBTITLE},
@@ -142,6 +147,7 @@ static const ActionMapping actions[] =
         {"rewind"            , ACTION_PLAYER_REWIND},
         {"play"              , ACTION_PLAYER_PLAY},
         {"playpause"         , ACTION_PLAYER_PLAYPAUSE},
+        {"switchplayer"      , ACTION_SWITCH_PLAYER},
         {"delete"            , ACTION_DELETE_ITEM},
         {"copy"              , ACTION_COPY_ITEM},
         {"move"              , ACTION_MOVE_ITEM},
@@ -216,12 +222,26 @@ static const ActionMapping actions[] =
         {"decreasepar"       , ACTION_DECREASE_PAR},
         {"volampup"          , ACTION_VOLAMP_UP},
         {"volampdown"        , ACTION_VOLAMP_DOWN},
+        {"createbookmark"        , ACTION_CREATE_BOOKMARK},
+        {"createepisodebookmark" , ACTION_CREATE_EPISODE_BOOKMARK},
+        {"settingsreset"      , ACTION_SETTINGS_RESET},
+        {"settingslevelchange", ACTION_SETTINGS_LEVEL_CHANGE},
+
+        // 3D movie playback/GUI
+        {"stereomode"                , ACTION_STEREOMODE_SELECT}, // cycle 3D modes, for now an alias for next
+        {"nextstereomode"            , ACTION_STEREOMODE_NEXT},
+        {"previousstereomode"        , ACTION_STEREOMODE_PREVIOUS},
+        {"togglestereomode"          , ACTION_STEREOMODE_TOGGLE},
+        {"stereomodetomono"          , ACTION_STEREOMODE_TOMONO},
 
         // PVR actions
         {"channelup"             , ACTION_CHANNEL_UP},
         {"channeldown"           , ACTION_CHANNEL_DOWN},
         {"previouschannelgroup"  , ACTION_PREVIOUS_CHANNELGROUP},
         {"nextchannelgroup"      , ACTION_NEXT_CHANNELGROUP},
+        {"playpvr"               , ACTION_PVR_PLAY},
+        {"playpvrtv"             , ACTION_PVR_PLAY_TV},
+        {"playpvrradio"          , ACTION_PVR_PLAY_RADIO},
 
         // Mouse actions
         {"leftclick"         , ACTION_MOUSE_LEFT_CLICK},
@@ -232,6 +252,17 @@ static const ActionMapping actions[] =
         {"wheeldown"         , ACTION_MOUSE_WHEEL_DOWN},
         {"mousedrag"         , ACTION_MOUSE_DRAG},
         {"mousemove"         , ACTION_MOUSE_MOVE},
+
+        // Touch
+        {"tap"               , ACTION_TOUCH_TAP},
+        {"longpress"         , ACTION_TOUCH_LONGPRESS},
+        {"pangesture"        , ACTION_GESTURE_PAN},
+        {"zoomgesture"       , ACTION_GESTURE_ZOOM},
+        {"rotategesture"     , ACTION_GESTURE_ROTATE},
+        {"swipeleft"         , ACTION_GESTURE_SWIPE_LEFT},
+        {"swiperight"        , ACTION_GESTURE_SWIPE_RIGHT},
+        {"swipeup"           , ACTION_GESTURE_SWIPE_UP},
+        {"swipedown"         , ACTION_GESTURE_SWIPE_DOWN},
 
         // Do nothing action
         { "noop"             , ACTION_NOOP}
@@ -323,6 +354,7 @@ static const ActionMapping windows[] =
         {"karaokelargeselector"     , WINDOW_DIALOG_KARAOKE_SELECTOR},
         {"sliderdialog"             , WINDOW_DIALOG_SLIDER},
         {"addoninformation"         , WINDOW_DIALOG_ADDON_INFO},
+        {"subtitlesearch"           , WINDOW_DIALOG_SUBTITLES},
         {"musicplaylist"            , WINDOW_MUSIC_PLAYLIST},
         {"musicfiles"               , WINDOW_MUSIC_FILES},
         {"musiclibrary"             , WINDOW_MUSIC_NAV},
@@ -351,7 +383,8 @@ static const ActionMapping windows[] =
         {"peripherals"              , WINDOW_DIALOG_PERIPHERAL_MANAGER},
         {"peripheralsettings"       , WINDOW_DIALOG_PERIPHERAL_SETTINGS},
         {"extendedprogressdialog"   , WINDOW_DIALOG_EXT_PROGRESS},
-        {"mediafilter"              , WINDOW_DIALOG_MEDIA_FILTER}};
+        {"mediafilter"              , WINDOW_DIALOG_MEDIA_FILTER},
+        {"addon"                    , WINDOW_ADDON_START}};
 
 static const ActionMapping mousecommands[] =
 {
@@ -365,13 +398,26 @@ static const ActionMapping mousecommands[] =
   { "mousemove",   ACTION_MOUSE_MOVE }
 };
 
+static const ActionMapping touchcommands[] =
+{
+  { "tap",                ACTION_TOUCH_TAP },
+  { "longpress",          ACTION_TOUCH_LONGPRESS },
+  { "pan",                ACTION_GESTURE_PAN },
+  { "zoom",               ACTION_GESTURE_ZOOM },
+  { "rotate",             ACTION_GESTURE_ROTATE },
+  { "swipeleft",          ACTION_GESTURE_SWIPE_LEFT },
+  { "swiperight",         ACTION_GESTURE_SWIPE_RIGHT },
+  { "swipeup",            ACTION_GESTURE_SWIPE_UP },
+  { "swipedown",          ACTION_GESTURE_SWIPE_DOWN }
+};
+
 static const WindowMapping fallbackWindows[] =
 {
   { WINDOW_FULLSCREEN_LIVETV,          WINDOW_FULLSCREEN_VIDEO },
   { WINDOW_DIALOG_FULLSCREEN_INFO,     WINDOW_FULLSCREEN_VIDEO }
 };
 
-#ifdef WIN32
+#ifdef TARGET_WINDOWS
 static const ActionMapping appcommands[] =
 {
   { "browser_back",        APPCOMMAND_BROWSER_BACKWARD },
@@ -488,7 +534,7 @@ bool CButtonTranslator::Load(bool AlwaysLoad)
       CFileItemList files;
       XFILE::CDirectory::GetDirectory(DIRS_TO_CHECK[dirIndex], files, ".xml");
       // Sort the list for filesystem based priorities, e.g. 01-keymap.xml, 02-keymap-overrides.xml
-      files.Sort(SORT_METHOD_FILE, SortOrderAscending);
+      files.Sort(SortByFile, SortOrderAscending);
       for(int fileIndex = 0; fileIndex<files.Size(); ++fileIndex)
       {
         if (!files[fileIndex]->m_bIsFolder)
@@ -507,7 +553,7 @@ bool CButtonTranslator::Load(bool AlwaysLoad)
           CFileItemList files;
           XFILE::CDirectory::GetDirectory(devicedir, files, ".xml");
           // Sort the list for filesystem based priorities, e.g. 01-keymap.xml, 02-keymap-overrides.xml
-          files.Sort(SORT_METHOD_FILE, SortOrderAscending);
+          files.Sort(SortByFile, SortOrderAscending);
           for(int fileIndex = 0; fileIndex<files.Size(); ++fileIndex)
           {
             if (!files[fileIndex]->m_bIsFolder)
@@ -525,20 +571,19 @@ bool CButtonTranslator::Load(bool AlwaysLoad)
   }
 
 #if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
-#ifdef _LINUX
+#ifdef TARGET_POSIX
 #define REMOTEMAP "Lircmap.xml"
 #else
 #define REMOTEMAP "IRSSmap.xml"
 #endif
-  CStdString lircmapPath;
-  URIUtils::AddFileToFolder("special://xbmc/system/", REMOTEMAP, lircmapPath);
+  CStdString lircmapPath = URIUtils::AddFileToFolder("special://xbmc/system/", REMOTEMAP);
   lircRemotesMap.clear();
   if(CFile::Exists(lircmapPath))
     success |= LoadLircMap(lircmapPath);
   else
     CLog::Log(LOGDEBUG, "CButtonTranslator::Load - no system %s found, skipping", REMOTEMAP);
 
-  lircmapPath = g_settings.GetUserDataItem(REMOTEMAP);
+  lircmapPath = CProfilesManager::Get().GetUserDataItem(REMOTEMAP);
   if(CFile::Exists(lircmapPath))
     success |= LoadLircMap(lircmapPath);
   else
@@ -565,6 +610,11 @@ bool CButtonTranslator::LoadKeymap(const CStdString &keymapPath)
     return false;
   }
   TiXmlElement* pRoot = xmlDoc.RootElement();
+  if (!pRoot)
+  {
+    CLog::Log(LOGERROR, "Error getting keymap root: %s", keymapPath.c_str());
+    return false;
+  }
   CStdString strValue = pRoot->Value();
   if ( strValue != "keymap")
   {
@@ -597,7 +647,7 @@ bool CButtonTranslator::LoadKeymap(const CStdString &keymapPath)
 #if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
 bool CButtonTranslator::LoadLircMap(const CStdString &lircmapPath)
 {
-#ifdef _LINUX
+#ifdef TARGET_POSIX
 #define REMOTEMAPTAG "lircmap"
 #else
 #define REMOTEMAPTAG "irssmap"
@@ -694,7 +744,7 @@ int CButtonTranslator::TranslateLircRemoteString(const char* szDevice, const cha
 #if defined(HAS_SDL_JOYSTICK) || defined(HAS_EVENT_SERVER)
 void CButtonTranslator::MapJoystickActions(int windowID, TiXmlNode *pJoystick)
 {
-  string joyname = "_xbmc_"; // default global map name
+  string joyname = JOYSTICK_DEFAULT_MAP; // default global map name
   vector<string> joynames;
   map<int, string> buttonMap;
   map<int, string> axisMap;
@@ -814,7 +864,11 @@ bool CButtonTranslator::TranslateJoystickString(int window, const char* szDevice
 
   map<string, JoystickMap>::iterator it = jmap->find(szDevice);
   if (it==jmap->end())
-    return false;
+  {
+    it = jmap->find(JOYSTICK_DEFAULT_MAP); // default global map name
+    if (it==jmap->end())
+      return false;
+  }
 
   JoystickMap wmap = it->second;
 
@@ -833,6 +887,38 @@ bool CButtonTranslator::TranslateJoystickString(int window, const char* szDevice
   }
 
   return (action > 0);
+}
+
+bool CButtonTranslator::TranslateTouchAction(int touchAction, int touchPointers, int &window, int &action)
+{
+  action = 0;
+  if (touchPointers <= 0)
+    touchPointers = 1;
+
+  touchAction += touchPointers - 1;
+  touchAction |= KEY_TOUCH;
+
+  action = GetTouchActionCode(window, touchAction);
+  if (action <= 0)
+  {
+    window = WINDOW_INVALID;
+    action = GetTouchActionCode(-1, touchAction);
+  }
+
+  return action > 0;
+}
+
+int CButtonTranslator::GetActionCode(int window, int action)
+{
+  map<int, buttonMap>::const_iterator it = m_translatorMap.find(window);
+  if (it == m_translatorMap.end())
+    return 0;
+
+  buttonMap::const_iterator it2 = it->second.find(action);
+  if (it2 == it->second.end())
+    return 0;
+
+  return it2->second.id;
 }
 
 /*
@@ -902,6 +988,11 @@ int CButtonTranslator::GetFallbackWindow(int windowID)
     if (fallbackWindows[index].origin == windowID)
       return fallbackWindows[index].target;
   }
+  // for addon windows use WINDOW_ADDON_START
+  // because id is dynamic
+  if (windowID >= WINDOW_ADDON_START && windowID <= WINDOW_ADDON_END)
+    return WINDOW_ADDON_START;
+
   return -1;
 }
 
@@ -912,7 +1003,14 @@ CAction CButtonTranslator::GetAction(int window, const CKey &key, bool fallback)
   int actionID = GetActionCode(window, key, strAction);
   // if it's invalid, try to get it from the global map
   if (actionID == 0 && fallback)
-    actionID = GetActionCode( -1, key, strAction);
+  {
+    int fallbackWindow = GetFallbackWindow(window);
+    if (fallbackWindow > -1)
+      actionID = GetActionCode(fallbackWindow, key, strAction);
+    // still no valid action? use global map
+    if (actionID == 0)
+      actionID = GetActionCode( -1, key, strAction);
+  }
   // Now fill our action structure
   CAction action(actionID, strAction, key);
   return action;
@@ -933,7 +1031,7 @@ int CButtonTranslator::GetActionCode(int window, const CKey &key, CStdString &st
     strAction = (*it2).second.strID;
     it2 = (*it).second.end();
   }
-#ifdef _LINUX
+#ifdef TARGET_POSIX
   // Some buttoncodes changed in Hardy
   if (action == 0 && (code & KEY_VKEY) == KEY_VKEY && (code & 0x0F00))
   {
@@ -956,6 +1054,7 @@ void CButtonTranslator::MapAction(uint32_t buttonCode, const char *szAction, but
   int action = ACTION_NONE;
   if (!TranslateActionString(szAction, action) || !buttonCode)
     return;   // no valid action, or an invalid buttoncode
+
   // have a valid action, and a valid button - map it.
   // check to see if we've already got this (button,action) pair defined
   buttonMap::iterator it = map.find(buttonCode);
@@ -1024,7 +1123,7 @@ void CButtonTranslator::MapWindowActions(TiXmlNode *pWindow, int windowID)
       }
 
       // add our map to our table
-      if (map.size() > 0)
+      if (!map.empty())
         m_translatorMap.insert(pair<int, buttonMap>( windowID, map));
     }
   }
@@ -1040,13 +1139,23 @@ void CButtonTranslator::MapWindowActions(TiXmlNode *pWindow, int windowID)
     }
   }
 #endif
+
+  if ((pDevice = pWindow->FirstChild("touch")) != NULL)
+  {
+    // map touch actions
+    while (pDevice)
+    {
+      MapTouchActions(windowID, pDevice);
+      pDevice = pDevice->NextSibling("touch");
+    }
+  }
 }
 
 bool CButtonTranslator::TranslateActionString(const char *szAction, int &action)
 {
   action = ACTION_NONE;
   CStdString strAction = szAction;
-  strAction.ToLower();
+  StringUtils::ToLower(strAction);
   if (CBuiltins::HasCommand(strAction)) 
     action = ACTION_BUILT_IN_FUNCTION;
 
@@ -1081,18 +1190,18 @@ CStdString CButtonTranslator::TranslateWindow(int windowID)
 int CButtonTranslator::TranslateWindow(const CStdString &window)
 {
   CStdString strWindow(window);
-  if (strWindow.IsEmpty()) 
+  if (strWindow.empty()) 
     return WINDOW_INVALID;
-  strWindow.ToLower();
+  StringUtils::ToLower(strWindow);
   // eliminate .xml
-  if (strWindow.Mid(strWindow.GetLength() - 4) == ".xml" )
-    strWindow = strWindow.Mid(0, strWindow.GetLength() - 4);
+  if (StringUtils::EndsWith(strWindow, ".xml"))
+    strWindow = strWindow.substr(0, strWindow.size() - 4);
 
   // window12345, for custom window to be keymapped
-  if (strWindow.length() > 6 && strWindow.Left(6).Equals("window"))
-    strWindow = strWindow.Mid(6);
-  if (strWindow.Left(2) == "my")  // drop "my" prefix
-    strWindow = strWindow.Mid(2);
+  if (strWindow.length() > 6 && StringUtils::StartsWithNoCase(strWindow, "window"))
+    strWindow = strWindow.substr(6);
+  if (StringUtils::StartsWithNoCase(strWindow, "my"))  // drop "my" prefix
+    strWindow = strWindow.substr(2);
   if (StringUtils::IsNaturalNumber(strWindow))
   {
     // allow a full window id or a delta id
@@ -1119,7 +1228,7 @@ uint32_t CButtonTranslator::TranslateGamepadString(const char *szButton)
     return 0;
   uint32_t buttonCode = 0;
   CStdString strButton = szButton;
-  strButton.ToLower();
+  StringUtils::ToLower(strButton);
   if (strButton.Equals("a")) buttonCode = KEY_BUTTON_A;
   else if (strButton.Equals("b")) buttonCode = KEY_BUTTON_B;
   else if (strButton.Equals("x")) buttonCode = KEY_BUTTON_X;
@@ -1158,7 +1267,7 @@ uint32_t CButtonTranslator::TranslateRemoteString(const char *szButton)
     return 0;
   uint32_t buttonCode = 0;
   CStdString strButton = szButton;
-  strButton.ToLower();
+  StringUtils::ToLower(strButton);
   if (strButton.Equals("left")) buttonCode = XINPUT_IR_REMOTE_LEFT;
   else if (strButton.Equals("right")) buttonCode = XINPUT_IR_REMOTE_RIGHT;
   else if (strButton.Equals("up")) buttonCode = XINPUT_IR_REMOTE_UP;
@@ -1268,9 +1377,17 @@ uint32_t CButtonTranslator::TranslateKeyboardButton(TiXmlElement *pButton)
   CStdString strKey = szButton;
   if (strKey.Equals("key"))
   {
-    int id = 0;
-    if (pButton->QueryIntAttribute("id", &id) == TIXML_SUCCESS)
-      button_id = (uint32_t)id;
+    std::string strID;
+    if (pButton->QueryValueAttribute("id", &strID) == TIXML_SUCCESS)
+    {
+      const char *str = strID.c_str();
+      char *endptr;
+      long int id = strtol(str, &endptr, 0);
+      if (endptr - str != (int)strlen(str) || id <= 0 || id > 0x00FFFFFF)
+        CLog::Log(LOGDEBUG, "%s - invalid key id %s", __FUNCTION__, strID.c_str());
+      else
+        button_id = (uint32_t) id;
+    }
     else
       CLog::Log(LOGERROR, "Keyboard Translator: `key' button has no id");
   }
@@ -1281,14 +1398,14 @@ uint32_t CButtonTranslator::TranslateKeyboardButton(TiXmlElement *pButton)
   CStdString strMod;
   if (pButton->QueryValueAttribute("mod", &strMod) == TIXML_SUCCESS)
   {
-    strMod.ToLower();
+    StringUtils::ToLower(strMod);
 
     CStdStringArray modArray;
     StringUtils::SplitString(strMod, ",", modArray);
     for (unsigned int i = 0; i < modArray.size(); i++)
     {
       CStdString& substr = modArray[i];
-      substr.Trim();
+      StringUtils::Trim(substr);
 
       if (substr == "ctrl" || substr == "control")
         button_id |= CKey::MODIFIER_CTRL;
@@ -1298,6 +1415,8 @@ uint32_t CButtonTranslator::TranslateKeyboardButton(TiXmlElement *pButton)
         button_id |= CKey::MODIFIER_ALT;
       else if (substr == "super" || substr == "win")
         button_id |= CKey::MODIFIER_SUPER;
+      else if (substr == "meta" || substr == "cmd")
+        button_id |= CKey::MODIFIER_META;
       else
         CLog::Log(LOGERROR, "Keyboard Translator: Unknown key modifier %s in %s", substr.c_str(), strMod.c_str());
      }
@@ -1308,9 +1427,9 @@ uint32_t CButtonTranslator::TranslateKeyboardButton(TiXmlElement *pButton)
 
 uint32_t CButtonTranslator::TranslateAppCommand(const char *szButton)
 {
-#ifdef WIN32
+#ifdef TARGET_WINDOWS
   CStdString strAppCommand = szButton;
-  strAppCommand.ToLower();
+  StringUtils::ToLower(strAppCommand);
 
   for (int i = 0; i < sizeof(appcommands)/sizeof(appcommands[0]); i++)
     if (strAppCommand.Equals(appcommands[i].name))
@@ -1325,7 +1444,7 @@ uint32_t CButtonTranslator::TranslateAppCommand(const char *szButton)
 uint32_t CButtonTranslator::TranslateMouseCommand(const char *szButton)
 {
   CStdString strMouseCommand = szButton;
-  strMouseCommand.ToLower();
+  StringUtils::ToLower(strMouseCommand);
 
   for (unsigned int i = 0; i < sizeof(mousecommands)/sizeof(mousecommands[0]); i++)
     if (strMouseCommand.Equals(mousecommands[i].name))
@@ -1351,4 +1470,110 @@ void CButtonTranslator::Clear()
 #endif
 
   m_Loaded = false;
+}
+
+uint32_t CButtonTranslator::TranslateTouchCommand(TiXmlElement *pButton, CButtonAction &action)
+{
+  const char *szButton = pButton->Value();
+  if (szButton == NULL || pButton->FirstChild() == NULL)
+    return ACTION_NONE;
+
+  const char *szAction = pButton->FirstChild()->Value();
+  if (szAction == NULL)
+    return ACTION_NONE;
+
+  CStdString strTouchCommand = szButton;
+  StringUtils::ToLower(strTouchCommand);
+
+  const char *attrVal = pButton->Attribute("direction");
+  if (attrVal != NULL)
+    strTouchCommand += attrVal;
+
+  uint32_t actionId = ACTION_NONE;
+  for (unsigned int i = 0; i < sizeof(touchcommands)/sizeof(touchcommands[0]); i++)
+  {
+    if (strTouchCommand.Equals(touchcommands[i].name))
+    {
+      actionId = touchcommands[i].action;
+      break;
+    }
+  }
+
+  if (actionId <= ACTION_NONE)
+  {
+    CLog::Log(LOGERROR, "%s: Can't find touch command %s", __FUNCTION__, szButton);
+    return ACTION_NONE;
+  }
+
+  attrVal = pButton->Attribute("pointers");
+  if (attrVal != NULL)
+  {
+    int pointers = (int)strtol(attrVal, NULL, 0);
+    if (pointers >= 1)
+      actionId += pointers - 1;
+  }
+
+  action.strID = szAction;
+  if (!TranslateActionString(szAction, action.id) || action.id <= ACTION_NONE)
+    return ACTION_NONE;
+
+  return actionId | KEY_TOUCH;
+}
+
+void CButtonTranslator::MapTouchActions(int windowID, TiXmlNode *pTouch)
+{
+  if (pTouch == NULL)
+    return;
+
+  buttonMap map;
+  // check if there already is a touch map for the window ID
+  std::map<int, buttonMap>::iterator it = m_touchMap.find(windowID);
+  if (it != m_touchMap.end())
+  {
+    // get the existing touch map and remove it from the window mapping
+    // as it will be inserted later on
+    map = it->second;
+    m_touchMap.erase(it);
+  }
+
+  uint32_t actionId = 0;
+  TiXmlElement *pTouchElem = pTouch->ToElement();
+  if (pTouchElem == NULL)
+    return;
+
+  TiXmlElement *pButton = pTouchElem->FirstChildElement();
+  while (pButton != NULL)
+  {
+    CButtonAction action;
+    actionId = TranslateTouchCommand(pButton, action);
+    if (actionId > 0)
+    {
+      // check if there already is a mapping for the parsed action
+      // and remove it if necessary
+      buttonMap::iterator actionIt = map.find(actionId);
+      if (actionIt != map.end())
+        map.erase(actionIt);
+
+      map.insert(std::make_pair(actionId, action));
+    }
+
+    pButton = pButton->NextSiblingElement();
+  }
+
+  // add the modified touch map with the window ID
+  if (!map.empty())
+    m_touchMap.insert(std::pair<int, buttonMap>(windowID, map));
+}
+
+int CButtonTranslator::GetTouchActionCode(int window, int action)
+{
+  std::map<int, buttonMap>::const_iterator windowIt = m_touchMap.find(window);
+  if (windowIt == m_touchMap.end())
+    return ACTION_NONE;
+
+  buttonMap::const_iterator touchIt = windowIt->second.find(action);
+  if (touchIt == windowIt->second.end())
+    return ACTION_NONE;
+
+  return touchIt->second.id;
 }

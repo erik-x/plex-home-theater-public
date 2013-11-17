@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "settings/AdvancedSettings.h"
 #include "guilib/LocalizeStrings.h"
 #include "utils/log.h"
+#include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "PosixMountProvider.h"
 
@@ -139,7 +140,7 @@ CMediaSource CUDiskDevice::ToMediaShare()
   CMediaSource source;
   source.strPath = m_MountPath;
   if (m_Label.empty())
-    source.strName.Format("%.1f GB %s", m_PartitionSizeGiB, g_localizeStrings.Get(155).c_str());
+    source.strName = StringUtils::Format("%.1f GB %s", m_PartitionSizeGiB, g_localizeStrings.Get(155).c_str());
   else
     source.strName = m_Label;
   if (m_isOptical)
@@ -162,15 +163,12 @@ bool CUDiskDevice::IsApproved()
 
 CStdString CUDiskDevice::toString()
 {
-  CStdString str;
-  str.Format("DeviceUDI %s: IsFileSystem %s HasFileSystem %s "
+  return StringUtils::Format("DeviceUDI %s: IsFileSystem %s HasFileSystem %s "
       "IsSystemInternal %s IsMounted %s IsRemovable %s IsPartition %s "
       "IsOptical %s",
-      m_DeviceKitUDI.c_str(), BOOL2SZ(m_isFileSystem), m_FileSystem,
+      m_DeviceKitUDI.c_str(), BOOL2SZ(m_isFileSystem), m_FileSystem.c_str(),
       BOOL2SZ(m_isSystemInternal), BOOL2SZ(m_isMounted),
       BOOL2SZ(m_isRemovable), BOOL2SZ(m_isPartition), BOOL2SZ(m_isOptical));
-
-  return str;
 }
 
 CUDisksProvider::CUDisksProvider()
@@ -303,8 +301,7 @@ bool CUDisksProvider::HasUDisks()
 
 void CUDisksProvider::DeviceAdded(const char *object, IStorageEventsCallback *callback)
 {
-  if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG_SAMBA)
-    CLog::Log(LOGDEBUG, "UDisks: DeviceAdded (%s)", object);
+  CLog::Log(LOGDEBUG|LOGDBUS, "UDisks: DeviceAdded (%s)", object);
 
   if (m_AvailableDevices[object])
   {
@@ -319,8 +316,7 @@ void CUDisksProvider::DeviceAdded(const char *object, IStorageEventsCallback *ca
   if (g_advancedSettings.m_handleMounting)
     device->Mount();
 
-  if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG_SAMBA)
-    CLog::Log(LOGDEBUG, "UDisks: DeviceAdded - %s", device->toString().c_str());
+  CLog::Log(LOGDEBUG|LOGDBUS, "UDisks: DeviceAdded - %s", device->toString().c_str());
 
   if (device->m_isMounted && device->IsApproved())
   {
@@ -332,8 +328,7 @@ void CUDisksProvider::DeviceAdded(const char *object, IStorageEventsCallback *ca
 
 void CUDisksProvider::DeviceRemoved(const char *object, IStorageEventsCallback *callback)
 {
-  if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG_SAMBA)
-    CLog::Log(LOGDEBUG, "UDisks: DeviceRemoved (%s)", object);
+  CLog::Log(LOGDEBUG|LOGDBUS, "UDisks: DeviceRemoved (%s)", object);
 
   CUDiskDevice *device = m_AvailableDevices[object];
   if (device)
@@ -348,8 +343,7 @@ void CUDisksProvider::DeviceRemoved(const char *object, IStorageEventsCallback *
 
 void CUDisksProvider::DeviceChanged(const char *object, IStorageEventsCallback *callback)
 {
-  if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG_SAMBA)
-    CLog::Log(LOGDEBUG, "UDisks: DeviceChanged (%s)", object);
+  CLog::Log(LOGDEBUG|LOGDBUS, "UDisks: DeviceChanged (%s)", object);
 
   CUDiskDevice *device = m_AvailableDevices[object];
   if (device == NULL)
@@ -371,8 +365,7 @@ void CUDisksProvider::DeviceChanged(const char *object, IStorageEventsCallback *
     else if (mounted && !device->m_isMounted && callback)
       callback->OnStorageSafelyRemoved(device->m_Label);
 
-    if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG_SAMBA)
-      CLog::Log(LOGDEBUG, "UDisks: DeviceChanged - %s", device->toString().c_str());
+    CLog::Log(LOGDEBUG|LOGDBUS, "UDisks: DeviceChanged - %s", device->toString().c_str());
   }
 }
 

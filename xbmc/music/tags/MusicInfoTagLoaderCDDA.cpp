@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include "MusicInfoTagLoaderCDDA.h"
 #include "network/cddb.h"
 #include "MusicInfoTag.h"
-#include "settings/Settings.h"
+#include "profiles/ProfilesManager.h"
 #include "storage/MediaManager.h"
 #include "utils/log.h"
 
@@ -62,7 +62,7 @@ bool CMusicInfoTagLoaderCDDA::Load(const CStdString& strFileName, CMusicInfoTag&
 
     // Prepare cddb
     Xcddb cddb;
-    cddb.setCacheDir(g_settings.GetCDDBFolder());
+    cddb.setCacheDir(CProfilesManager::Get().GetCDDBFolder());
 
     int iTrack = atoi(strFileName.substr(13, strFileName.size() - 13 - 5).c_str());
 
@@ -88,7 +88,7 @@ bool CMusicInfoTagLoaderCDDA::Load(const CStdString& strFileName, CMusicInfoTag&
 
           // Artist: Use track artist or disc artist
           CStdString strArtist = cddb.getTrackArtist(iTrack);
-          if (strArtist.IsEmpty())
+          if (strArtist.empty())
             cddb.getDiskArtist(strArtist);
           tag.SetArtist(strArtist);
 
@@ -135,7 +135,7 @@ bool CMusicInfoTagLoaderCDDA::Load(const CStdString& strFileName, CMusicInfoTag&
 
         // Artist: Use track artist or disc artist
         CStdString strArtist = ti.cdtext[CDTEXT_PERFORMER];
-        if (strArtist.IsEmpty())
+        if (strArtist.empty())
           strArtist = discCDText[CDTEXT_PERFORMER];
         tag.SetArtist(strArtist);
 
@@ -146,7 +146,7 @@ bool CMusicInfoTagLoaderCDDA::Load(const CStdString& strFileName, CMusicInfoTag&
 
         // Genre: use track or disc genre
         CStdString strGenre = ti.cdtext[CDTEXT_GENRE];
-        if (strGenre.IsEmpty())
+        if (strGenre.empty())
           strGenre = discCDText[CDTEXT_GENRE];
         tag.SetGenre( strGenre );
 

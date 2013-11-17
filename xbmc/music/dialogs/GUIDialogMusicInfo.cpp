@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,22 +24,24 @@
 #include "dialogs/GUIDialogFileBrowser.h"
 #include "GUIPassword.h"
 #include "music/MusicDatabase.h"
-#include "music/LastFmManager.h"
 #include "music/tags/MusicInfoTag.h"
 #include "URL.h"
 #include "filesystem/File.h"
 #include "FileItem.h"
+#include "profiles/ProfilesManager.h"
 #include "storage/MediaManager.h"
 #include "utils/AsyncFileCopy.h"
-#include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
-#include "settings/GUISettings.h"
+#include "settings/MediaSourceSettings.h"
+#include "settings/Settings.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "utils/log.h"
 #include "utils/URIUtils.h"
 #include "utils/StringUtils.h"
 #include "TextureCache.h"
 #include "music/MusicThumbLoader.h"
+#include "filesystem/Directory.h"
 
 using namespace std;
 using namespace XFILE;
@@ -50,7 +52,6 @@ using namespace XFILE;
 #define CONTROL_BTN_TRACKS       5
 #define CONTROL_BTN_REFRESH      6
 #define CONTROL_BTN_GET_THUMB   10
-#define CONTROL_BTN_LASTFM      11
 #define  CONTROL_BTN_GET_FANART 12
 
 #define CONTROL_LIST            50
@@ -124,15 +125,6 @@ bool CGUIDialogMusicInfo::OnMessage(CGUIMessage& message)
           OnSearch(item.get());
           return true;
         }
-      }
-      else if (iControl == CONTROL_BTN_LASTFM)
-      {
-        CStdString strArtist = StringUtils::Join(m_album.artist, g_advancedSettings.m_musicItemSeparator);
-        CURL::Encode(strArtist);
-        CStdString strLink;
-        strLink.Format("lastfm://artist/%s/similarartists", strArtist.c_str());
-        CURL url(strLink);
-        CLastFmManager::GetInstance()->ChangeStation(url);
       }
       else if (iControl == CONTROL_BTN_GET_FANART)
       {
@@ -305,22 +297,12 @@ void CGUIDialogMusicInfo::Update()
   }
 
   // disable the GetThumb button if the user isn't allowed it
-  CONTROL_ENABLE_ON_CONDITION(CONTROL_BTN_GET_THUMB, g_settings.GetCurrentProfile().canWriteDatabases() || g_passwordManager.bMasterUser);
-
-  if (!m_album.artist.empty() && CLastFmManager::GetInstance()->IsLastFmEnabled())
-  {
-    SET_CONTROL_VISIBLE(CONTROL_BTN_LASTFM);
-  }
-  else
-  {
-    SET_CONTROL_HIDDEN(CONTROL_BTN_LASTFM);
-  }
-
+  CONTROL_ENABLE_ON_CONDITION(CONTROL_BTN_GET_THUMB, CProfilesManager::Get().GetCurrentProfile().canWriteDatabases() || g_passwordManager.bMasterUser);
 }
 
 void CGUIDialogMusicInfo::SetLabel(int iControl, const CStdString& strLabel)
 {
-  if (strLabel.IsEmpty())
+  if (strLabel.empty())
   {
     SET_CONTROL_LABEL(iControl, (iControl == CONTROL_TEXTAREA) ? (m_bArtistInfo?547:414) : 416);
   }
@@ -372,7 +354,7 @@ void CGUIDialogMusicInfo::OnGetThumb()
   for (unsigned int i = 0; i < thumbs.size(); ++i)
   {
     CStdString strItemPath;
-    strItemPath.Format("thumb://Remote%i", i);
+    strItemPath = StringUtils::Format("thumb://Remote%i", i);
     CFileItemPtr item(new CFileItem(strItemPath, false));
     item->SetArt("thumb", thumbs[i]);
     item->SetIconImage("DefaultPicture.png");
@@ -391,7 +373,7 @@ void CGUIDialogMusicInfo::OnGetThumb()
     database.Open();
     CStdString strArtistPath;
     if (database.GetArtistPath(m_artist.idArtist,strArtistPath))
-      URIUtils::AddFileToFolder(strArtistPath,"folder.jpg",localThumb);
+      localThumb = URIUtils::AddFileToFolder(strArtistPath, "folder.jpg");
   }
   else
     localThumb = m_albumItem->GetUserMusicThumb();
@@ -415,7 +397,8 @@ void CGUIDialogMusicInfo::OnGetThumb()
 
   CStdString result;
   bool flip=false;
-  VECSOURCES sources(g_settings.m_musicSources);
+  VECSOURCES sources(*CMediaSourceSettings::Get().GetSources("music"));
+  AddItemPathToFileBrowserSources(sources, *m_albumItem);
   g_mediaManager.GetLocalDrives(sources);
   if (!CGUIDialogFileBrowser::ShowAndGetImage(items, sources, g_localizeStrings.Get(1030), result, &flip))
     return;   // user cancelled
@@ -424,9 +407,9 @@ void CGUIDialogMusicInfo::OnGetThumb()
     return;   // user chose the one they have
 
   CStdString newThumb;
-  if (result.Left(14) == "thumb://Remote")
+  if (StringUtils::StartsWith(result, "thumb://Remote"))
   {
-    int number = atoi(result.Mid(14));
+    int number = atoi(result.substr(14).c_str());
     newThumb = thumbs[number];
   }
   else if (result == "thumb://Local")
@@ -472,11 +455,10 @@ void CGUIDialogMusicInfo::OnGetFanart()
   // Grab the thumbnails from the web
   for (unsigned int i = 0; i < m_artist.fanart.GetNumFanarts(); i++)
   {
-    CStdString strItemPath;
-    strItemPath.Format("fanart://Remote%i",i);
+    CStdString strItemPath = StringUtils::Format("fanart://Remote%i",i);
     CFileItemPtr item(new CFileItem(strItemPath, false));
     CStdString thumb = m_artist.fanart.GetPreviewURL(i);
-    item->SetArt("thumb", CTextureCache::GetWrappedThumbURL(thumb));
+    item->SetArt("thumb", CTextureUtils::GetWrappedThumbURL(thumb));
     item->SetIconImage("DefaultPicture.png");
     item->SetLabel(g_localizeStrings.Get(20441));
 
@@ -492,7 +474,7 @@ void CGUIDialogMusicInfo::OnGetFanart()
   database.GetArtistPath(m_artist.idArtist,strArtistPath);
   CFileItem item(strArtistPath,true);
   CStdString strLocal = item.GetLocalFanart();
-  if (!strLocal.IsEmpty())
+  if (!strLocal.empty())
   {
     CFileItemPtr itemLocal(new CFileItem("fanart://Local",false));
     itemLocal->SetArt("thumb", strLocal);
@@ -511,7 +493,7 @@ void CGUIDialogMusicInfo::OnGetFanart()
   }
 
   CStdString result;
-  VECSOURCES sources(g_settings.m_musicSources);
+  VECSOURCES sources = *CMediaSourceSettings::Get().GetSources("music");
   g_mediaManager.GetLocalDrives(sources);
   bool flip=false;
   if (!CGUIDialogFileBrowser::ShowAndGetImage(items, sources, g_localizeStrings.Get(20437), result, &flip, 20445))
@@ -525,9 +507,9 @@ void CGUIDialogMusicInfo::OnGetFanart()
   if (result.Equals("fanart://Local"))
     result = strLocal;
 
-  if (result.Left(15)  == "fanart://Remote")
+  if (StringUtils::StartsWith(result, "fanart://Remote"))
   {
-    int iFanart = atoi(result.Mid(15).c_str());
+    int iFanart = atoi(result.substr(15).c_str());
     m_artist.fanart.SetPrimaryFanart(iFanart);
     result = m_artist.fanart.GetImageURL();
   }
@@ -535,7 +517,7 @@ void CGUIDialogMusicInfo::OnGetFanart()
     result.clear();
 
   if (flip && !result.empty())
-    result = CTextureCache::GetWrappedImageURL(result, "", "flipped");
+    result = CTextureUtils::GetWrappedImageURL(result, "", "flipped");
 
   // update thumb in the database
   CMusicDatabase db;
@@ -578,3 +560,20 @@ CFileItemPtr CGUIDialogMusicInfo::GetCurrentListItem(int offset)
   return m_albumItem;
 }
 
+void CGUIDialogMusicInfo::AddItemPathToFileBrowserSources(VECSOURCES &sources, const CFileItem &item)
+{
+  CStdString itemDir;
+
+  if (item.HasMusicInfoTag() && item.GetMusicInfoTag()->GetType() == "song")
+    itemDir = URIUtils::GetParentPath(item.GetMusicInfoTag()->GetURL());
+  else
+    itemDir = item.GetPath();
+
+  if (!itemDir.empty() && CDirectory::Exists(itemDir))
+  {
+    CMediaSource itemSource;
+    itemSource.strName = g_localizeStrings.Get(36041);
+    itemSource.strPath = itemDir;
+    sources.push_back(itemSource);
+  }
+}

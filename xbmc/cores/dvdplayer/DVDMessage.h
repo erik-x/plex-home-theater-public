@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -72,6 +72,8 @@ public:
     PLAYER_CHANNEL_SELECT_NUMBER,   // switches to the channel with the provided channel number
     PLAYER_CHANNEL_SELECT,          // switches to the provided channel
     PLAYER_STARTED,                 // sent whenever a sub player has finished it's first frame after open
+
+    PLAYER_DISPLAYTIME,             // display time struct from av players
 
     // demuxer related messages
 
@@ -160,7 +162,7 @@ public:
 
   // waits until all threads waiting, released the object
   // if abort is set somehow
-  bool Wait(unsigned long  ms   , unsigned int source);
+  bool Wait(unsigned int   ms   , unsigned int source);
   void Wait(volatile bool *abort, unsigned int source);
 private:
   class CDVDMsgGeneralSynchronizePriv* m_p;
@@ -209,7 +211,7 @@ private:
 class CDVDMsgPlayerSetState : public CDVDMsg
 {
 public:
-  CDVDMsgPlayerSetState(std::string& state) : CDVDMsg(PLAYER_SET_STATE) { m_state = state; }
+  CDVDMsgPlayerSetState(std::string& state) : CDVDMsg(PLAYER_SET_STATE), m_state(state) {}
   std::string GetState()                { return m_state; }
 private:
   std::string m_state;
@@ -299,7 +301,7 @@ public:
 class CDVDMsgSubtitleClutChange : public CDVDMsg
 {
 public:
-  CDVDMsgSubtitleClutChange(BYTE* data) : CDVDMsg(SUBTITLE_CLUTCHANGE) { memcpy(m_data, data, 16*4); }
-  BYTE m_data[16][4];
+  CDVDMsgSubtitleClutChange(uint8_t* data) : CDVDMsg(SUBTITLE_CLUTCHANGE) { memcpy(m_data, data, 16*4); }
+  uint8_t m_data[16][4];
 private:
 };

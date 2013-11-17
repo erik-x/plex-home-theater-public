@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "addons/AddonManager.h"
 #include "utils/log.h"
 #include "utils/Variant.h"
+#include "utils/StringUtils.h"
 #include "XBDateTime.h"
 #include "addons/Service.h"
 #include "dbwrappers/dataset.h"
@@ -392,14 +393,14 @@ int CAddonDatabase::AddRepository(const CStdString& id, const VECADDONS& addons,
   return -1;
 }
 
-int CAddonDatabase::GetRepoChecksum(const CStdString& id, CStdString& checksum)
+int CAddonDatabase::GetRepoChecksum(const std::string& id, std::string& checksum)
 {
   try
   {
     if (NULL == m_pDB.get()) return -1;
     if (NULL == m_pDS.get()) return -1;
 
-    CStdString strSQL = PrepareSQL("select * from repo where addonID='%s'",id.c_str());
+    std::string strSQL = PrepareSQL("select * from repo where addonID='%s'",id.c_str());
     m_pDS->query(strSQL.c_str());
     if (!m_pDS->eof())
     {
@@ -411,7 +412,7 @@ int CAddonDatabase::GetRepoChecksum(const CStdString& id, CStdString& checksum)
   {
     CLog::Log(LOGERROR, "%s failed on repo '%s'", __FUNCTION__, id.c_str());
   }
-  checksum.Empty();
+  checksum.clear();
   return -1;
 }
 
@@ -546,11 +547,13 @@ void CAddonDatabase::SetPropertiesFromAddon(const AddonPtr& addon,
   pItem->SetProperty("Addon.Creator", addon->Author());
   pItem->SetProperty("Addon.Disclaimer", addon->Disclaimer());
   pItem->SetProperty("Addon.Rating", addon->Stars());
-  CStdString starrating;
-  starrating.Format("rating%d.png", addon->Stars());
+  CStdString starrating = StringUtils::Format("rating%d.png", addon->Stars());
   pItem->SetProperty("Addon.StarRating",starrating);
   pItem->SetProperty("Addon.Path", addon->Path());
-  pItem->SetProperty("Addon.Broken", addon->Props().broken);
+  if (addon->Props().broken == "DEPSNOTMET")
+    pItem->SetProperty("Addon.Broken", g_localizeStrings.Get(24044));
+  else
+    pItem->SetProperty("Addon.Broken", addon->Props().broken);
   std::map<CStdString,CStdString>::iterator it = 
                     addon->Props().extrainfo.find("language");
   if (it != addon->Props().extrainfo.end())
@@ -566,12 +569,9 @@ bool CAddonDatabase::DisableAddon(const CStdString &addonID, bool disable /* = t
 
     if (disable)
     {
-      CStdString sql = PrepareSQL("select id from disabled where addonID='%s'", addonID.c_str());
-      m_pDS->query(sql.c_str());
-      if (m_pDS->eof()) // not found
+      if (!IsAddonDisabled(addonID)) // Enabled
       {
-        m_pDS->close();
-        sql = PrepareSQL("insert into disabled(id, addonID) values(NULL, '%s')", addonID.c_str());
+        CStdString sql = PrepareSQL("insert into disabled(id, addonID) values(NULL, '%s')", addonID.c_str());
         m_pDS->exec(sql);
 
         AddonPtr addon;
@@ -593,12 +593,13 @@ bool CAddonDatabase::DisableAddon(const CStdString &addonID, bool disable /* = t
     }
     else
     {
+      bool disabled = IsAddonDisabled(addonID); //we need to know if service addon is running
       CStdString sql = PrepareSQL("delete from disabled where addonID='%s'", addonID.c_str());
       m_pDS->exec(sql);
 
       AddonPtr addon;
       // If the addon is a service, start it
-      if (CAddonMgr::Get().GetAddon(addonID, addon, ADDON_SERVICE, false) && addon)
+      if (CAddonMgr::Get().GetAddon(addonID, addon, ADDON_SERVICE, false) && addon && disabled)
       {
         boost::shared_ptr<CService> service = boost::dynamic_pointer_cast<CService>(addon);
         if (service)
@@ -627,7 +628,7 @@ bool CAddonDatabase::BreakAddon(const CStdString &addonID, const CStdString& rea
     CStdString sql = PrepareSQL("delete from broken where addonID='%s'", addonID.c_str());
     m_pDS->exec(sql);
 
-    if (!reason.IsEmpty())
+    if (!reason.empty())
     { // broken
       sql = PrepareSQL("insert into broken(id, addonID, reason) values(NULL, '%s', '%s')", addonID.c_str(),reason.c_str());
       m_pDS->exec(sql);
@@ -646,7 +647,7 @@ bool CAddonDatabase::HasAddon(const CStdString &addonID)
   CStdString strWhereClause = PrepareSQL("addonID = '%s'", addonID.c_str());
   CStdString strHasAddon = GetSingleValue("addon", "id", strWhereClause);
   
-  return !strHasAddon.IsEmpty();
+  return !strHasAddon.empty();
 }
 
 bool CAddonDatabase::IsAddonDisabled(const CStdString &addonID)
@@ -674,7 +675,7 @@ bool CAddonDatabase::IsSystemPVRAddonEnabled(const CStdString &addonID)
   CStdString strWhereClause = PrepareSQL("addonID = '%s'", addonID.c_str());
   CStdString strEnabled = GetSingleValue("pvrenabled", "id", strWhereClause);
 
-  return !strEnabled.IsEmpty();
+  return !strEnabled.empty();
 }
 
 CStdString CAddonDatabase::IsAddonBroken(const CStdString &addonID)
@@ -742,7 +743,7 @@ bool CAddonDatabase::IsAddonBlacklisted(const CStdString& addonID,
                                         const CStdString& version)
 {
   CStdString where = PrepareSQL("addonID='%s' and version='%s'",addonID.c_str(),version.c_str());
-  return !GetSingleValue("blacklist","addonID",where).IsEmpty();
+  return !GetSingleValue("blacklist","addonID",where).empty();
 }
 
 bool CAddonDatabase::RemoveAddonFromBlacklist(const CStdString& addonID,

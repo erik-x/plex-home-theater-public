@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2011-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2011-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ PCMCodec::PCMCodec()
   m_Channels = 2;
   m_BitsPerSample = 16;
   m_Bitrate = m_SampleRate * m_Channels * m_BitsPerSample;
+  m_DataFormat = AE_FMT_S16LE;
 }
 
 PCMCodec::~PCMCodec()
@@ -111,11 +112,13 @@ void PCMCodec::SetMimeParams(const CStdString& strMimeParams)
     {
       if (thisParam[0] == "rate")
       {
-        m_SampleRate = atoi(thisParam[1].Trim());
+        StringUtils::Trim(thisParam[1]);
+        m_SampleRate = atoi(thisParam[1]);
       }
       else if (thisParam[0] == "channels")
       {
-        m_Channels = atoi(thisParam[1].Trim());
+        StringUtils::Trim(thisParam[1]);
+        m_Channels = atoi(thisParam[1]);
       }
     }
   }

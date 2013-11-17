@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2010-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2010-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,8 +30,10 @@
 #include "WinSystemIOS.h"
 #include "utils/log.h"
 #include "filesystem/SpecialProtocol.h"
-#include "settings/Settings.h"
+#include "settings/DisplaySettings.h"
+#include "guilib/GraphicContext.h"
 #include "guilib/Texture.h"
+#include "utils/StringUtils.h"
 #include <vector>
 #undef BOOL
 
@@ -123,7 +125,7 @@ bool CWinSystemIOS::SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool bl
   return true;
 }
 
-UIScreenMode *getModeForResolution(int width, int height, int screenIdx)
+UIScreenMode *getModeForResolution(int width, int height, unsigned int screenIdx)
 {
   if( screenIdx >= [[UIScreen screens] count])
     return NULL;
@@ -208,12 +210,12 @@ void CWinSystemIOS::UpdateResolutions()
   //first screen goes into the current desktop mode
   if(GetScreenResolution(&w, &h, &fps, 0))
   {
-    UpdateDesktopResolution(g_settings.m_ResInfo[RES_DESKTOP], 0, w, h, fps);
+    UpdateDesktopResolution(CDisplaySettings::Get().GetResolutionInfo(RES_DESKTOP), 0, w, h, fps);
   }
 
 #ifndef TARGET_DARWIN_IOS_ATV2
   //see resolution.h enum RESOLUTION for how the resolutions
-  //have to appear in the g_settings.m_ResInfo vector
+  //have to appear in the resolution info vector in CDisplaySettings
   //add the desktop resolutions of the other screens
   for(int i = 1; i < GetNumScreens(); i++)
   {
@@ -222,12 +224,12 @@ void CWinSystemIOS::UpdateResolutions()
     if(GetScreenResolution(&w, &h, &fps, i))
     {
       UpdateDesktopResolution(res, i, w, h, fps);
-      g_settings.m_ResInfo.push_back(res);
+      CDisplaySettings::Get().AddResolutionInfo(res);
     }
   }
   
   //now just fill in the possible reolutions for the attached screens
-  //and push to the m_ResInfo vector
+  //and push to the resolution info vector
   FillInVideoModes();
 #endif //TARGET_DARWIN_IOS_ATV2
 }
@@ -266,9 +268,9 @@ void CWinSystemIOS::FillInVideoModes()
       //mode str by doing it without appending "Full Screen".
       //this is what linux does - though it feels that there shouldn't be
       //the same resolution twice... - thats why i add a FIXME here.
-      res.strMode.Format("%dx%d @ %.2f", w, h, refreshrate);
+      res.strMode = StringUtils::Format("%dx%d @ %.2f", w, h, refreshrate);
       g_graphicsContext.ResetOverscan(res);
-      g_settings.m_ResInfo.push_back(res);
+      CDisplaySettings::Get().AddResolutionInfo(res);
     }
   }
 }

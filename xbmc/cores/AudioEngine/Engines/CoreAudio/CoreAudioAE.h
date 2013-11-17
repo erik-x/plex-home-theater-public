@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2011-2012 Team XBMC
+ *      Copyright (C) 2011-2013 Team XBMC
  *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -91,9 +91,9 @@ public:
   virtual void      SetMute(const bool enabled);
   virtual bool      IsMuted();
   virtual void      SetSoundMode(const int mode);
-
-
-  virtual bool      SupportsRaw();
+  virtual bool      SupportsRaw(AEDataFormat format);
+  virtual bool      IsSettingVisible(const std::string &settingId);
+  virtual bool      SupportsDrain() { return true; }
 
   CCoreAudioAEHAL*  GetHAL();
 
@@ -120,6 +120,8 @@ public:
   virtual OSStatus  Render(AudioUnitRenderActionFlags* actionFlags,
     const AudioTimeStamp* pTimeStamp, UInt32 busNumber,
     UInt32 frameCount, AudioBufferList* pBufList);
+    
+  void AudioDevicesChanged();
 
 
 private:
@@ -154,10 +156,11 @@ private:
   unsigned int      m_lastSampleRate;
   unsigned int      m_chLayoutCount;
   bool              m_rawPassthrough;
+  bool              m_transcode;
 
   enum AEStdChLayout m_stdChLayout;
 
-  bool              OpenCoreAudio(unsigned int sampleRate, bool forceRaw, enum AEDataFormat rawDataFormat);
+  bool              OpenCoreAudio(unsigned int sampleRate, bool forceRaw, enum AEDataFormat rawDataFormat, bool forceTranscode);
   void              Deinitialize();
   void              Start();
   void              Stop();
@@ -172,4 +175,6 @@ private:
   int               m_soundMode;
   bool              m_streamsPlaying;
   bool              m_isSuspended;
+  bool              m_softSuspend;
+  unsigned int      m_softSuspendTimer;
 };

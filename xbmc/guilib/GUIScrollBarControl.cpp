@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #include "GUIScrollBarControl.h"
 #include "Key.h"
+#include "utils/StringUtils.h"
 
 #define MIN_NIB_SIZE 4.0f
 
@@ -143,7 +144,7 @@ bool CGUIScrollBar::Move(int numSteps)
 {
   if (numSteps < 0 && m_offset == 0) // we are at the beginning - can't scroll up/left anymore
     return false;
-  if (numSteps > 0 && m_offset == m_numItems - m_pageSize) // we are at the end - we can't scroll down/right anymore
+  if (numSteps > 0 && m_offset == std::max(m_numItems - m_pageSize, 0)) // we are at the end - we can't scroll down/right anymore
     return false;
 
   m_offset += numSteps * m_pageSize;
@@ -361,9 +362,7 @@ EVENT_RESULT CGUIScrollBar::OnMouseEvent(const CPoint &point, const CMouseEvent 
 
 CStdString CGUIScrollBar::GetDescription() const
 {
-  CStdString description;
-  description.Format("%i/%i", m_offset, m_numItems);
-  return description;
+  return StringUtils::Format("%i/%i", m_offset, m_numItems);
 }
 
 bool CGUIScrollBar::UpdateColors()

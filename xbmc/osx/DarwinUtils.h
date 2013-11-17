@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2010-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2010-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,19 +22,30 @@
 
 #include <string>
 
+// We forward declare CFStringRef in order to avoid
+// pulling in tons of Objective-C headers.
+struct __CFString;
+typedef const struct __CFString * CFStringRef;
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
   bool        DarwinIsAppleTV2(void);
-  bool        DarwinIsIPad3(void);
+  bool        DarwinIsMavericks(void);
+  bool        DarwinHasRetina(void);
+  const char *GetDarwinOSReleaseString(void);
   const char *GetDarwinVersionString(void);
   float       GetIOSVersion(void);
   int         GetDarwinFrameworkPath(bool forPython, char* path, uint32_t *pathsize);
   int         GetDarwinExecutablePath(char* path, uint32_t *pathsize);
+  const char *DarwinGetXbmcRootFolder(void);
+  bool        DarwinIsIosSandboxed(void);
   bool        DarwinHasVideoToolboxDecoder(void);
   int         DarwinBatteryLevel(void);
   void        DarwinSetScheduling(int message);
+  bool        DarwinCFStringRefToString(CFStringRef source, std::string& destination);
+  bool        DarwinCFStringRefToUTF8String(CFStringRef source, std::string& destination);
 #ifdef __cplusplus
 }
 #endif

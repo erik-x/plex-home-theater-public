@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,7 +28,9 @@
 #include "settings/Settings.h"
 #include "utils/Crc32.h"
 #include "guilib/LocalizeStrings.h"
+#include "utils/LegacyPathTranslation.h"
 #include "utils/log.h"
+#include "utils/StringUtils.h"
 
 using namespace std;
 using namespace XFILE;
@@ -44,7 +46,9 @@ CVideoDatabaseDirectory::~CVideoDatabaseDirectory(void)
 
 bool CVideoDatabaseDirectory::GetDirectory(const CStdString& strPath, CFileItemList &items)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  items.SetPath(path);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return false;
@@ -56,7 +60,7 @@ bool CVideoDatabaseDirectory::GetDirectory(const CStdString& strPath, CFileItemL
     if (item->m_bIsFolder && !item->HasIcon() && !item->HasArt("thumb"))
     {
       CStdString strImage = GetIcon(item->GetPath());
-      if (!strImage.IsEmpty() && g_TextureManager.HasTexture(strImage))
+      if (!strImage.empty() && g_TextureManager.HasTexture(strImage))
         item->SetIconImage(strImage);
     }
   }
@@ -67,7 +71,8 @@ bool CVideoDatabaseDirectory::GetDirectory(const CStdString& strPath, CFileItemL
 
 NODE_TYPE CVideoDatabaseDirectory::GetDirectoryChildType(const CStdString& strPath)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return NODE_TYPE_NONE;
@@ -77,7 +82,8 @@ NODE_TYPE CVideoDatabaseDirectory::GetDirectoryChildType(const CStdString& strPa
 
 NODE_TYPE CVideoDatabaseDirectory::GetDirectoryType(const CStdString& strPath)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return NODE_TYPE_NONE;
@@ -87,7 +93,8 @@ NODE_TYPE CVideoDatabaseDirectory::GetDirectoryType(const CStdString& strPath)
 
 NODE_TYPE CVideoDatabaseDirectory::GetDirectoryParentType(const CStdString& strPath)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return NODE_TYPE_NONE;
@@ -102,7 +109,8 @@ NODE_TYPE CVideoDatabaseDirectory::GetDirectoryParentType(const CStdString& strP
 
 bool CVideoDatabaseDirectory::GetQueryParams(const CStdString& strPath, CQueryParams& params)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return false;
@@ -113,20 +121,19 @@ bool CVideoDatabaseDirectory::GetQueryParams(const CStdString& strPath, CQueryPa
 
 void CVideoDatabaseDirectory::ClearDirectoryCache(const CStdString& strDirectory)
 {
-  CStdString path(strDirectory);
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strDirectory);
   URIUtils::RemoveSlashAtEnd(path);
 
   Crc32 crc;
   crc.ComputeFromLowerCase(path);
 
-  CStdString strFileName;
-  strFileName.Format("special://temp/%08x.fi", (unsigned __int32) crc);
+  CStdString strFileName = StringUtils::Format("special://temp/%08x.fi", (unsigned __int32) crc);
   CFile::Delete(strFileName);
 }
 
 bool CVideoDatabaseDirectory::IsAllItem(const CStdString& strDirectory)
 {
-  if (strDirectory.Right(4).Equals("/-1/"))
+  if (StringUtils::EndsWith(strDirectory, "/-1/"))
     return true;
   return false;
 }
@@ -135,13 +142,14 @@ bool CVideoDatabaseDirectory::GetLabel(const CStdString& strDirectory, CStdStrin
 {
   strLabel = "";
 
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strDirectory));
-  if (!pNode.get() || strDirectory.IsEmpty())
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strDirectory);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
+  if (!pNode.get() || path.empty())
     return false;
 
   // first see if there's any filter criteria
   CQueryParams params;
-  CDirectoryNode::GetDatabaseInfo(strDirectory, params);
+  CDirectoryNode::GetDatabaseInfo(path, params);
 
   CVideoDatabase videodatabase;
   if (!videodatabase.Open())
@@ -166,14 +174,13 @@ bool CVideoDatabaseDirectory::GetLabel(const CStdString& strDirectory, CStdStrin
   // get year
   if (params.GetYear() != -1)
   {
-    CStdString strTemp;
-    strTemp.Format("%i",params.GetYear());
-    if (!strLabel.IsEmpty())
+    CStdString strTemp = StringUtils::Format("%i",params.GetYear());
+    if (!strLabel.empty())
       strLabel += " / ";
     strLabel += strTemp;
   }
 
-  if (strLabel.IsEmpty())
+  if (strLabel.empty())
   {
     switch (pNode->GetChildType())
     {
@@ -224,28 +231,29 @@ bool CVideoDatabaseDirectory::GetLabel(const CStdString& strDirectory, CStdStrin
 
 CStdString CVideoDatabaseDirectory::GetIcon(const CStdString &strDirectory)
 {
-  switch (GetDirectoryChildType(strDirectory))
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strDirectory);
+  switch (GetDirectoryChildType(path))
   {
   case NODE_TYPE_TITLE_MOVIES:
-    if (strDirectory.Equals("videodb://1/2/"))
+    if (path.Equals("videodb://movies/titles/"))
     {
-      if (g_settings.m_bMyVideoNavFlatten)
+      if (CSettings::Get().GetBool("myvideos.flatten"))
         return "DefaultMovies.png";
       return "DefaultMovieTitle.png";
     }
     return "";
   case NODE_TYPE_TITLE_TVSHOWS:
-    if (strDirectory.Equals("videodb://2/2/"))
+    if (path.Equals("videodb://tvshows/titles/"))
     {
-      if (g_settings.m_bMyVideoNavFlatten)
+      if (CSettings::Get().GetBool("myvideos.flatten"))
         return "DefaultTVShows.png";
       return "DefaultTVShowTitle.png";
     }
     return "";
   case NODE_TYPE_TITLE_MUSICVIDEOS:
-    if (strDirectory.Equals("videodb://3/2/"))
+    if (path.Equals("videodb://musicvideos/titles/"))
     {
-      if (g_settings.m_bMyVideoNavFlatten)
+      if (CSettings::Get().GetBool("myvideos.flatten"))
         return "DefaultMusicVideos.png";
       return "DefaultMusicVideoTitle.png";
     }
@@ -297,7 +305,8 @@ bool CVideoDatabaseDirectory::ContainsMovies(const CStdString &path)
 
 bool CVideoDatabaseDirectory::Exists(const char* strPath)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
 
   if (!pNode.get())
     return false;
@@ -310,7 +319,8 @@ bool CVideoDatabaseDirectory::Exists(const char* strPath)
 
 bool CVideoDatabaseDirectory::CanCache(const CStdString& strPath)
 {
-  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(strPath));
+  CStdString path = CLegacyPathTranslation::TranslateVideoDbPath(strPath);
+  auto_ptr<CDirectoryNode> pNode(CDirectoryNode::ParseURL(path));
   if (!pNode.get())
     return false;
   return pNode->CanCache();

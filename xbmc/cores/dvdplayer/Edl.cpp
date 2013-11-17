@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +28,8 @@
 #include "utils/XBMCTinyXML.h"
 #include "PlatformDefs.h"
 #include "URL.h"
+#include "pvr/recordings/PVRRecordings.h"
+#include "pvr/PVRManager.h"
 
 extern "C"
 {
@@ -79,7 +81,7 @@ bool CEdl::ReadEditDecisionLists(const CStdString& strMovie, const float fFrameR
    * back frame markers. However, this doesn't seem possible for MythTV.
    */
   float fFramesPerSecond;
-  if (int(fFrameRate * 100) == 5994) // 59.940 fps = NTSC or 60i content
+  if (iHeight <= 480 && int(fFrameRate * 100) == 5994) // 59.940 fps = NTSC or 60i content except for 1280x720/60
   {
     fFramesPerSecond = fFrameRate / 2; // ~29.97f - division used to retain accuracy of original.
     CLog::Log(LOGDEBUG, "%s - Assuming NTSC or 60i interlaced content. Adjusted frames per second from %.3f (~59.940 fps) to %.3f",
@@ -112,7 +114,10 @@ bool CEdl::ReadEditDecisionLists(const CStdString& strMovie, const float fFrameR
    * Only check for edit decision lists if the movie is on the local hard drive, or accessed over a
    * network share.
    */
-  if ((URIUtils::IsHD(strMovie) ||  URIUtils::IsSmb(strMovie)) &&
+  if ((URIUtils::IsHD(strMovie)  || 
+       URIUtils::IsSmb(strMovie) || 
+       URIUtils::IsNfs(strMovie) || 
+       URIUtils::IsAfp(strMovie))         &&
       !URIUtils::IsPVRRecording(strMovie) &&
       !URIUtils::IsInternetStream(strMovie))
   {
@@ -147,6 +152,17 @@ bool CEdl::ReadEditDecisionLists(const CStdString& strMovie, const float fFrameR
     CLog::Log(LOGDEBUG, "%s - Checking for cut list within MythTV for: %s", __FUNCTION__,
               strMovie.c_str());
     bFound |= ReadMythCutList(strMovie, fFramesPerSecond);
+  }
+
+  /*
+   * PVR Recordings
+   */
+  else if (URIUtils::IsPVRRecording(strMovie))
+  {
+    CLog::Log(LOGDEBUG, "%s - Checking for edit decision list (EDL) for PVR recording: %s",
+      __FUNCTION__, strMovie.c_str());
+
+    bFound = ReadPvr(strMovie);
   }
 
   if (bFound)
@@ -213,7 +229,7 @@ bool CEdl::ReadEdl(const CStdString& strMovie, const float fFramesPerSecond)
     int64_t iCutStartEnd[2];
     for (int i = 0; i < 2; i++)
     {
-      if (strFields[i].Find(":") != -1) // HH:MM:SS.sss format
+      if (strFields[i].find(":") != std::string::npos) // HH:MM:SS.sss format
       {
         CStdStringArray fieldParts;
         StringUtils::SplitString(strFields[i], ".", fieldParts);
@@ -236,7 +252,7 @@ bool CEdl::ReadEdl(const CStdString& strMovie, const float fFramesPerSecond)
           }
           else if (fieldParts[1].length() > 3)
           {
-            fieldParts[1] = fieldParts[1].Left(3);
+            fieldParts[1] = fieldParts[1].substr(0, 3);
           }
           iCutStartEnd[i] = (int64_t)StringUtils::TimeStringToSeconds(fieldParts[0]) * 1000 + atoi(fieldParts[1]); // seconds to ms
         }
@@ -246,9 +262,9 @@ bool CEdl::ReadEdl(const CStdString& strMovie, const float fFramesPerSecond)
           continue;
         }
       }
-      else if (strFields[i].Left(1) == "#") // #12345 format for frame number
+      else if (strFields[i][0] == '#') // #12345 format for frame number
       {
-        iCutStartEnd[i] = (int64_t)(atol(strFields[i].Mid(1)) / fFramesPerSecond * 1000); // frame number to ms
+        iCutStartEnd[i] = (int64_t)(atol(strFields[i].substr(1).c_str()) / fFramesPerSecond * 1000); // frame number to ms
       }
       else // Plain old seconds in float format, e.g. 123.45
       {
@@ -582,6 +598,72 @@ bool CEdl::ReadBeyondTV(const CStdString& strMovie)
   }
 }
 
+bool CEdl::ReadPvr(const CStdString &strMovie)
+{
+  if (!PVR::g_PVRManager.IsStarted())
+  {
+    CLog::Log(LOGERROR, "%s - PVR Manager not started, cannot read Edl for %s", __FUNCTION__, strMovie.c_str());
+    return false;
+  }
+
+  CFileItemPtr tag =  PVR::g_PVRRecordings->GetByPath(strMovie);
+  if (tag && tag->HasPVRRecordingInfoTag())
+  {
+    CLog::Log(LOGDEBUG, "%s - Reading Edl for recording: %s", __FUNCTION__, tag->GetPVRRecordingInfoTag()->m_strTitle.c_str());
+  }
+  else
+  {
+    CLog::Log(LOGERROR, "%s - Unable to find PVR recording: %s", __FUNCTION__, strMovie.c_str());
+    return false;
+  }
+
+  std::vector<PVR_EDL_ENTRY> edl = tag->GetPVRRecordingInfoTag()->GetEdl();
+  std::vector<PVR_EDL_ENTRY>::const_iterator it;
+  for (it = edl.begin(); it != edl.end(); ++it)
+  {
+    Cut cut;
+    cut.start = it->start;
+    cut.end = it->end;
+
+    switch (it->type)
+    {
+    case PVR_EDL_TYPE_CUT:
+      cut.action = CUT;
+      break;
+    case PVR_EDL_TYPE_MUTE:
+      cut.action = MUTE;
+      break;
+    case PVR_EDL_TYPE_SCENE:
+      if (!AddSceneMarker(cut.end))
+      {
+        CLog::Log(LOGWARNING, "%s - Error adding scene marker for pvr recording", __FUNCTION__);
+      }
+      continue;
+    case PVR_EDL_TYPE_COMBREAK:
+      cut.action = COMM_BREAK;
+      break;
+    default:
+      CLog::Log(LOGINFO, "%s - Ignoring entry of unknown type: %d", __FUNCTION__, it->type);
+      continue;
+    }
+
+    if (AddCut(cut))
+    {
+      CLog::Log(LOGDEBUG, "%s - Added break [%s - %s] found in PVRRecording for: %s.",
+        __FUNCTION__, MillisecondsToTimeString(cut.start).c_str(),
+        MillisecondsToTimeString(cut.end).c_str(), strMovie.c_str());
+    }
+    else
+    {
+      CLog::Log(LOGERROR, "%s - Invalid break [%s - %s] found in PVRRecording for: %s. Continuing anyway.",
+        __FUNCTION__, MillisecondsToTimeString(cut.start).c_str(),
+        MillisecondsToTimeString(cut.end).c_str(), strMovie.c_str());
+    }
+  }
+
+ return !edl.empty();
+}
+
 bool CEdl::AddCut(Cut& cut)
 {
   if (cut.action != CUT && cut.action != MUTE && cut.action != COMM_BREAK)
@@ -656,7 +738,7 @@ bool CEdl::AddCut(Cut& cut)
   else
   {
     vector<Cut>::iterator pCurrentCut;
-    for (pCurrentCut = m_vecCuts.begin(); pCurrentCut != m_vecCuts.end(); pCurrentCut++)
+    for (pCurrentCut = m_vecCuts.begin(); pCurrentCut != m_vecCuts.end(); ++pCurrentCut)
     {
       if (cut.start < pCurrentCut->start)
       {
@@ -713,7 +795,7 @@ bool CEdl::WriteMPlayerEdl()
      *
      * Write out mutes (1) directly. Treat commercial breaks as cuts (everything other than MUTES = 0).
      */
-    strBuffer.AppendFormat("%.3f\t%.3f\t%i\n", (float)(m_vecCuts[i].start / 1000),
+    strBuffer += StringUtils::Format("%.3f\t%.3f\t%i\n", (float)(m_vecCuts[i].start / 1000),
                                                (float)(m_vecCuts[i].end / 1000),
                                                m_vecCuts[i].action == MUTE ? 1 : 0);
   }
@@ -806,16 +888,16 @@ CStdString CEdl::GetInfo()
       }
     }
     if (cutCount > 0)
-      strInfo.AppendFormat("c%i", cutCount);
+      strInfo += StringUtils::Format("c%i", cutCount);
     if (muteCount > 0)
-      strInfo.AppendFormat("m%i", muteCount);
+      strInfo += StringUtils::Format("m%i", muteCount);
     if (commBreakCount > 0)
-      strInfo.AppendFormat("b%i", commBreakCount);
+      strInfo += StringUtils::Format("b%i", commBreakCount);
   }
   if (HasSceneMarker())
-    strInfo.AppendFormat("s%i", m_vecSceneMarkers.size());
+    strInfo += StringUtils::Format("s%i", m_vecSceneMarkers.size());
 
-  return strInfo.IsEmpty() ? "-" : strInfo;
+  return strInfo.empty() ? "-" : strInfo;
 }
 
 bool CEdl::InCut(const int64_t iSeek, Cut *pCut)
@@ -885,7 +967,7 @@ bool CEdl::GetNextSceneMarker(bool bPlus, const int64_t iClock, int64_t *iSceneM
 CStdString CEdl::MillisecondsToTimeString(const int64_t iMilliseconds)
 {
   CStdString strTimeString = StringUtils::SecondsToTimeString((long)(iMilliseconds / 1000), TIME_FORMAT_HH_MM_SS); // milliseconds to seconds
-  strTimeString.AppendFormat(".%03i", iMilliseconds % 1000);
+  strTimeString += StringUtils::Format(".%03i", iMilliseconds % 1000);
   return strTimeString;
 }
 

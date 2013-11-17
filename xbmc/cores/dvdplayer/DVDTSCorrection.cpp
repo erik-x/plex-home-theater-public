@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include "DVDClock.h"
 #include "DVDCodecs/DVDCodecUtils.h"
 #include "utils/log.h"
-
+#include "utils/StringUtils.h"
 #include <cmath>
 
 #define MAXERR DVD_MSEC_TO_TIME(2.5)
@@ -176,7 +176,7 @@ void CPullupCorrection::GetPattern(std::vector<double>& pattern)
     }
   }
 
-  bool checkexisting = m_pattern.size() > 0;
+  bool checkexisting = !m_pattern.empty();
 
   //we check for patterns to the length of DIFFRINGSIZE / 2
   for (int i = 1; i <= m_ringfill / 2; i++)
@@ -272,7 +272,7 @@ inline bool CPullupCorrection::MatchDifftype(int* diffs1, int* diffs2, int nrdif
 bool CPullupCorrection::CheckPattern(std::vector<double>& pattern)
 {
   //if no pattern was detected or if the size of the patterns differ we don't have a match
-  if (pattern.size() != m_pattern.size() || pattern.size() < 1)
+  if (pattern.empty() || pattern.size() != m_pattern.size())
     return false;
 
   if (pattern.size() == 1)
@@ -299,7 +299,7 @@ bool CPullupCorrection::CheckPattern(std::vector<double>& pattern)
 //calculate how long each frame should last from the saved pattern
 double CPullupCorrection::CalcFrameDuration()
 {
-  if (m_pattern.size() > 0)
+  if (!m_pattern.empty())
   {
     //take the average of all diffs in the pattern
     double frameduration = 0.0;
@@ -321,9 +321,9 @@ CStdString CPullupCorrection::GetPatternStr()
   CStdString patternstr;
 
   for (unsigned int i = 0; i < m_pattern.size(); i++)
-    patternstr.AppendFormat("%.2f ", m_pattern[i]);
+    patternstr += StringUtils::Format("%.2f ", m_pattern[i]);
 
-  patternstr.Trim();
+  StringUtils::Trim(patternstr);
 
   return patternstr;
 }

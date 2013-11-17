@@ -1,7 +1,7 @@
 #pragma once
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
-
 
 #include "system.h"
 #ifdef HAS_FILESYSTEM_SFTP
@@ -58,7 +57,8 @@ public:
   sftp_file CreateFileHande(const CStdString &file);
   void CloseFileHandle(sftp_file handle);
   bool GetDirectory(const CStdString &base, const CStdString &folder, CFileItemList &items);
-  bool Exists(const char *path);
+  bool DirectoryExists(const char *path);
+  bool FileExists(const char *path);
   int Stat(const char *path, struct __stat64* buffer);
   int Seek(sftp_file handle, uint64_t position);
   int Read(sftp_file handle, void *buffer, size_t length);
@@ -68,6 +68,7 @@ private:
   bool VerifyKnownHost(ssh_session session);
   bool Connect(const CStdString &host, unsigned int port, const CStdString &username, const CStdString &password);
   void Disconnect();
+  bool GetItemPermissions(const char *path, uint32_t &permissions);
   CCriticalSection m_critSect;
 
   bool m_connected;

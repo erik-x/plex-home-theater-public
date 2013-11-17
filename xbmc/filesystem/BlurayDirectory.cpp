@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include "BlurayDirectory.h"
 #include "utils/log.h"
 #include "utils/URIUtils.h"
+#include "utils/StringUtils.h"
 #include "URL.h"
 #include "DllLibbluray.h"
 #include "FileItem.h"
@@ -59,12 +60,12 @@ CFileItemPtr CBlurayDirectory::GetTitle(const BLURAY_TITLE_INFO* title, const CS
   CStdString buf;
   CFileItemPtr item(new CFileItem("", false));
   CURL path(m_url);
-  buf.Format("BDMV/PLAYLIST/%05d.mpls", title->playlist);
+  buf = StringUtils::Format("BDMV/PLAYLIST/%05d.mpls", title->playlist);
   path.SetFileName(buf);
   item->SetPath(path.Get());
   item->GetVideoInfoTag()->m_duration = (int)(title->duration / 90000);
   item->GetVideoInfoTag()->m_iTrack = title->playlist;
-  buf.Format(label.c_str(), title->playlist);
+  buf = StringUtils::Format(label.c_str(), title->playlist);
   item->m_strTitle = buf;
   item->SetLabel(buf);
   item->m_dwSize = 0;
@@ -146,6 +147,7 @@ bool CBlurayDirectory::GetDirectory(const CStdString& path, CFileItemList &items
   CStdString root = m_url.GetHostName();
   CStdString file = m_url.GetFileName();
   URIUtils::RemoveSlashAtEnd(file);
+  URIUtils::RemoveSlashAtEnd(root);
 
   m_dll = new DllLibbluray();
   if (!m_dll->Load())
@@ -174,8 +176,8 @@ bool CBlurayDirectory::GetDirectory(const CStdString& path, CFileItemList &items
   else
     return false;
 
-  items.AddSortMethod(SORT_METHOD_TRACKNUM , 554, LABEL_MASKS("%L", "%D", "%L", ""));    // FileName, Duration | Foldername, empty
-  items.AddSortMethod(SORT_METHOD_SIZE     , 553, LABEL_MASKS("%L", "%I", "%L", "%I"));  // FileName, Size | Foldername, Size
+  items.AddSortMethod(SortByTrackNumber,  554, LABEL_MASKS("%L", "%D", "%L", ""));    // FileName, Duration | Foldername, empty
+  items.AddSortMethod(SortBySize,         553, LABEL_MASKS("%L", "%I", "%L", "%I"));  // FileName, Size | Foldername, Size
 
   return true;
 }

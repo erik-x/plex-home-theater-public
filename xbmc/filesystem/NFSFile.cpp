@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2011-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2011-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "threads/SingleLock.h"
 #include "utils/log.h"
 #include "utils/URIUtils.h"
+#include "utils/StringUtils.h"
 #include "network/DNSNameCache.h"
 #include "threads/SystemClock.h"
 
@@ -140,6 +141,17 @@ void CNfsConnection::destroyOpenContexts()
   m_openContextMap.clear();
 }
 
+void CNfsConnection::destroyContext(const CStdString &exportName)
+{
+  CSingleLock lock(openContextLock);
+  tOpenContextMap::iterator it = m_openContextMap.find(exportName.c_str());
+  if (it != m_openContextMap.end()) 
+  {
+      m_pLibNfs->nfs_destroy_context(it->second.pContext);
+      m_openContextMap.erase(it);
+  }
+}
+
 struct nfs_context *CNfsConnection::getContextFromMap(const CStdString &exportname, bool forceCacheHit/* = false*/)
 {
   struct nfs_context *pRet = NULL;
@@ -166,6 +178,7 @@ struct nfs_context *CNfsConnection::getContextFromMap(const CStdString &exportna
       //destroy it and return NULL
       CLog::Log(LOGDEBUG, "NFS: Old context timed out - destroying it");
       m_pLibNfs->nfs_destroy_context(it->second.pContext);
+      m_openContextMap.erase(it);
     }
   }
   return pRet;
@@ -240,16 +253,16 @@ bool CNfsConnection::splitUrlIntoExportAndPath(const CURL& url, CStdString &expo
       for(it=m_exportList.begin();it!=m_exportList.end();it++)
       {
         //if path starts with the current export path
-        if( path.Find(*it) ==  0 )
+        if(StringUtils::StartsWith(path, *it))
         {
           exportPath = *it;
           //handle special case where root is exported
           //in that case we don't want to stripp off to
           //much from the path
           if( exportPath == "/" )
-            relativePath = "//" + path.Right((path.length()) - exportPath.length());
+            relativePath = "//" + path.substr(exportPath.length());
           else
-            relativePath = "//" + path.Right((path.length()-1) - exportPath.length());
+            relativePath = "//" + path.substr(exportPath.length()+1);
           ret = true;
           break;          
         }
@@ -288,6 +301,7 @@ bool CNfsConnection::Connect(const CURL& url, CStdString &relativePath)
       if(nfsRet != 0) 
       {
         CLog::Log(LOGERROR,"NFS: Failed to mount nfs share: %s (%s)\n", exportPath.c_str(), m_pLibNfs->nfs_get_error(m_pNfsContext));
+        destroyContext(url.GetHostName() + exportPath);
         return false;
       }
       CLog::Log(LOGDEBUG,"NFS: Connected to server %s and export %s\n", url.GetHostName().c_str(), exportPath.c_str());
@@ -831,9 +845,9 @@ bool CNFSFile::OpenForWrite(const CURL& url, bool bOverWrite)
 
 bool CNFSFile::IsValidFile(const CStdString& strFileName)
 {
-  if (strFileName.Find('/') == -1 || /* doesn't have sharename */
-      strFileName.Right(2) == "/." || /* not current folder */
-      strFileName.Right(3) == "/..")  /* not parent folder */
+  if (strFileName.find('/') == std::string::npos || /* doesn't have sharename */
+      StringUtils::EndsWith(strFileName, "/.") || /* not current folder */
+      StringUtils::EndsWith(strFileName, "/.."))  /* not parent folder */
     return false;
   return true;
 }

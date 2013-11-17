@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +21,17 @@
 #include "InfoBool.h"
 #include <stack>
 #include "utils/log.h"
+#include "utils/StringUtils.h"
 #include "GUIInfoManager.h"
 
 using namespace std;
 using namespace INFO;
+
+bool InfoBool::operator==(const InfoBool &right) const
+{
+  return (m_context == right.m_context &&
+          StringUtils::EqualsNoCase(m_expression, right.m_expression));
+}
 
 InfoSingle::InfoSingle(const CStdString &expression, int context)
 : InfoBool(expression, context)
@@ -79,7 +86,7 @@ void InfoExpression::Parse(const CStdString &expression)
     if (GetOperator(expression[i]))
     {
       // cleanup any operand, translate and put into our expression list
-      if (!operand.IsEmpty())
+      if (!operand.empty())
       {
         unsigned int info = g_infoManager.Register(operand, m_context);
         if (info)
@@ -92,7 +99,7 @@ void InfoExpression::Parse(const CStdString &expression)
       // handle closing parenthesis
       if (expression[i] == ']')
       {
-        while (operators.size())
+        while (!operators.empty())
         {
           char oper = operators.top();
           operators.pop();
@@ -156,7 +163,7 @@ bool InfoExpression::Evaluate(const CGUIListItem *item, bool &result)
     short expr = *it;
     if (expr == -OPERATOR_NOT)
     { // NOT the top item on the stack
-      if (save.size() < 1) return false;
+      if (save.empty()) return false;
       bool expr = save.top();
       save.pop();
       save.push(!expr);

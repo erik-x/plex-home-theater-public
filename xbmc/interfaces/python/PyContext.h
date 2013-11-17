@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,15 +13,16 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *  http://www.gnu.org/copyleft/gpl.html
+ *  along with XBMC; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  */
 namespace XBMCAddon
 {
   namespace Python
   {
+    class PyGILLock;
+
     /**
      * These classes should NOT be used with 'new'. They are expected to reside 
      *  as stack instances and they act as "Guard" classes that track the
@@ -30,9 +31,13 @@ namespace XBMCAddon
     class PyContext
     {
     protected:
+      friend class PyGILLock;
+      static void* enterContext();
+      static void leaveContext();
     public:
-      PyContext();
-      ~PyContext();
+
+      inline PyContext() { enterContext(); }
+      inline ~PyContext() { leaveContext(); }
     };
 
     /**

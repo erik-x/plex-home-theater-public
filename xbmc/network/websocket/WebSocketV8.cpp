@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2011-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2011-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include "WebSocketV8.h"
 #include "WebSocket.h"
 #include "utils/Base64.h"
-#include "utils/CharsetConverter.h"
 #include "utils/EndianSwap.h"
 #include "utils/HttpParser.h"
 #include "utils/HttpResponse.h"
@@ -110,9 +109,10 @@ bool CWebSocketV8::Handshake(const char* data, size_t length, std::string &respo
   {
     CStdStringArray protocols;
     StringUtils::SplitString(value, ",", protocols);
-    for (unsigned int index = 0; index < protocols.size(); index++)
+    for (CStdStringArray::iterator protocol = protocols.begin(); protocol != protocols.end(); ++protocol)
     {
-      if (protocols.at(index).Trim().Equals(WS_PROTOCOL_JSONRPC))
+      StringUtils::Trim(*protocol);
+      if (*protocol == WS_PROTOCOL_JSONRPC)
       {
         websocketProtocol = WS_PROTOCOL_JSONRPC;
         break;

@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2012-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -294,7 +294,7 @@ bool CEpgDatabase::GetLastEpgScanTime(int iEpgId, CDateTime *lastScan)
   CStdString strWhereClause = FormatSQL("idEpg = %u", iEpgId);
   CStdString strValue = GetSingleValue("lastepgscan", "sLastScan", strWhereClause);
 
-  if (!strValue.IsEmpty())
+  if (!strValue.empty())
   {
     lastScan->SetFromDBDateTime(strValue.c_str());
     bReturn = true;

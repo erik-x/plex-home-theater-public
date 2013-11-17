@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 #include "utils/log.h"
 #include <errno.h>
 #include <sys/stat.h>
-#ifdef _WIN32
+#ifdef TARGET_WINDOWS
 #include "PlatformDefs.h" //for PRIdS
 #endif
 extern "C"
@@ -132,7 +132,7 @@ unsigned int CRTVFile::Read(void *lpBuf, int64_t uiBufSize)
   // Read uiBufSize bytes from the m_rtvd connection
   lenread = rtv_read_file(m_rtvd, (char *) lpBuf, (size_t) uiBufSize);
 
-  CLog::Log(LOGDEBUG, "%s - Requested %"PRIdS", Recieved %"PRIdS"", __FUNCTION__, (size_t)uiBufSize, lenread);
+  CLog::Log(LOGDEBUG, "%s - Requested %"PRIdS", Received %"PRIdS"", __FUNCTION__, (size_t)uiBufSize, lenread);
 
   // Some extra checking so library behaves
   if(m_filePos + lenread > m_fileSize)

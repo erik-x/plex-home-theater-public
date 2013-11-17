@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,9 +13,8 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *  http://www.gnu.org/copyleft/gpl.html
+ *  along with XBMC; see the file COPYING.  If not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  */
 
@@ -40,7 +39,7 @@ namespace XBMCAddon
                        const String& label2,
                        const String& iconImage,
                        const String& thumbnailImage,
-                       const String& path) : AddonClass("ListItem")
+                       const String& path)
     {
       item.reset();
 
@@ -157,50 +156,52 @@ namespace XBMCAddon
     {
       LOCKGUI;
       CStdString lowerKey = key;
-      if (lowerKey.CompareNoCase("startoffset") == 0)
+      StringUtils::ToLower(lowerKey);
+      if (lowerKey == "startoffset")
       { // special case for start offset - don't actually store in a property,
         // we store it in item.m_lStartOffset instead
         item->m_lStartOffset = (int)(atof(value.c_str()) * 75.0); // we store the offset in frames, or 1/75th of a second
       }
-      else if (lowerKey.CompareNoCase("mimetype") == 0)
+      else if (lowerKey == "mimetype")
       { // special case for mime type - don't actually stored in a property,
         item->SetMimeType(value.c_str());
       }
-      else if (lowerKey.CompareNoCase("totaltime") == 0)
+      else if (lowerKey == "totaltime")
         item->GetVideoInfoTag()->m_resumePoint.totalTimeInSeconds = (float)atof(value.c_str());
-      else if (lowerKey.CompareNoCase("resumetime") == 0)
+      else if (lowerKey == "resumetime")
         item->GetVideoInfoTag()->m_resumePoint.timeInSeconds = (float)atof(value.c_str());
-      else if (lowerKey.CompareNoCase("specialsort") == 0)
+      else if (lowerKey == "specialsort")
       {
         if (value == "bottom")
           item->SetSpecialSort(SortSpecialOnBottom);
         else if (value == "top")
           item->SetSpecialSort(SortSpecialOnTop);
       }
-      else if (lowerKey.CompareNoCase("fanart_image") == 0)
+      else if (lowerKey == "fanart_image")
         item->SetArt("fanart", value);
       else
-        item->SetProperty(lowerKey.ToLower(), value.c_str());
+        item->SetProperty(lowerKey, value);
     }
 
     String ListItem::getProperty(const char* key)
     {
       LOCKGUI;
       CStdString lowerKey = key;
+      StringUtils::ToLower(lowerKey);
       CStdString value;
-      if (lowerKey.CompareNoCase("startoffset") == 0)
+      if (lowerKey == "startoffset")
       { // special case for start offset - don't actually store in a property,
         // we store it in item.m_lStartOffset instead
-        value.Format("%f", item->m_lStartOffset / 75.0);
+        value = StringUtils::Format("%f", item->m_lStartOffset / 75.0);
       }
-      else if (lowerKey.CompareNoCase("totaltime") == 0)
-        value.Format("%f", item->GetVideoInfoTag()->m_resumePoint.totalTimeInSeconds);
-      else if (lowerKey.CompareNoCase("resumetime") == 0)
-        value.Format("%f", item->GetVideoInfoTag()->m_resumePoint.timeInSeconds);
-      else if (lowerKey.CompareNoCase("fanart_image") == 0)
+      else if (lowerKey == "totaltime")
+        value = StringUtils::Format("%f", item->GetVideoInfoTag()->m_resumePoint.totalTimeInSeconds);
+      else if (lowerKey == "resumetime")
+        value = StringUtils::Format("%f", item->GetVideoInfoTag()->m_resumePoint.timeInSeconds);
+      else if (lowerKey == "fanart_image")
         value = item->GetArt("fanart");
       else
-        value = item->GetProperty(lowerKey.ToLower()).asString();
+        value = item->GetProperty(lowerKey).asString();
 
       return value.c_str();
     }
@@ -251,10 +252,10 @@ namespace XBMCAddon
 
       if (strcmpi(type, "video") == 0)
       {
-        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); it++)
+        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); ++it)
         {
           CStdString key = it->first;
-          key.ToLower();
+          StringUtils::ToLower(key);
           const CStdString value(it->second.c_str());
 
           if (key == "year")
@@ -369,7 +370,12 @@ namespace XBMCAddon
           else if (key == "date")
           {
             if (value.length() == 10)
-              item->m_dateTime.SetDate(atoi(value.Right(4).c_str()), atoi(value.Mid(3,4).c_str()), atoi(value.Left(2).c_str()));
+            {
+              int year = atoi(value.substr(value.size() - 4).c_str());
+              int month = atoi(value.substr(3, 4).c_str());
+              int day = atoi(value.substr(0, 2).c_str());
+              item->m_dateTime.SetDate(year, month, day);
+            }
             else
               CLog::Log(LOGERROR,"NEWADDON Invalid Date Format \"%s\"",value.c_str());
           }
@@ -379,11 +385,11 @@ namespace XBMCAddon
       }
       else if (strcmpi(type, "music") == 0)
       {
-        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); it++)
+        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); ++it)
         {
           CStdString key = it->first;
 
-          key.ToLower();
+          StringUtils::ToLower(key);
           const CStdString value(it->second.c_str());
 
           // TODO: add the rest of the infolabels
@@ -418,11 +424,11 @@ namespace XBMCAddon
           else if (key == "musicbrainztrackid")
             item->GetMusicInfoTag()->SetMusicBrainzTrackID(value);
           else if (key == "musicbrainzartistid")
-            item->GetMusicInfoTag()->SetMusicBrainzArtistID(value);
+            item->GetMusicInfoTag()->SetMusicBrainzArtistID(StringUtils::Split(value, g_advancedSettings.m_musicItemSeparator));
           else if (key == "musicbrainzalbumid")
             item->GetMusicInfoTag()->SetMusicBrainzAlbumID(value);
           else if (key == "musicbrainzalbumartistid")
-            item->GetMusicInfoTag()->SetMusicBrainzAlbumArtistID(value);
+            item->GetMusicInfoTag()->SetMusicBrainzAlbumArtistID(StringUtils::Split(value, g_advancedSettings.m_musicItemSeparator));
           else if (key == "musicbrainztrmid")
             item->GetMusicInfoTag()->SetMusicBrainzTRMID(value);
           else if (key == "comment")
@@ -430,7 +436,11 @@ namespace XBMCAddon
           else if (key == "date")
           {
             if (strlen(value) == 10)
-              item->m_dateTime.SetDate(atoi(value.Right(4)), atoi(value.Mid(3,4)), atoi(value.Left(2)));
+            {
+              int year = atoi(value.substr(value.size() - 4).c_str());
+              int month = atoi(value.substr(3, 4).c_str());
+              int day = atoi(value.substr(0, 2).c_str());
+              item->m_dateTime.SetDate(year, month, day);            }
           }
           else
             CLog::Log(LOGERROR,"NEWADDON Unknown Music Info Key \"%s\"", key.c_str());
@@ -442,11 +452,10 @@ namespace XBMCAddon
       }
       else if (strcmpi(type,"pictures") == 0)
       {
-        bool pictureTagLoaded = false;
-        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); it++)
+        for (Dictionary::const_iterator it = infoLabels.begin(); it != infoLabels.end(); ++it)
         {
           CStdString key = it->first;
-          key.ToLower();
+          StringUtils::ToLower(key);
           const CStdString value(it->second.c_str());
 
           if (key == "count")
@@ -460,19 +469,21 @@ namespace XBMCAddon
           else if (key == "date")
           {
             if (strlen(value) == 10)
-              item->m_dateTime.SetDate(atoi(value.Right(4)), atoi(value.Mid(3,4)), atoi(value.Left(2)));
+            {
+              int year = atoi(value.substr(value.size() - 4).c_str());
+              int month = atoi(value.substr(3, 4).c_str());
+              int day = atoi(value.substr(0, 2).c_str());
+              item->m_dateTime.SetDate(year, month, day);
+            }
           }
           else
           {
             const CStdString& exifkey = key;
-            if (!exifkey.Left(5).Equals("exif:") || exifkey.length() < 6) continue;
-            int info = CPictureInfoTag::TranslateString(exifkey.Mid(5));
+            if (!StringUtils::StartsWithNoCase(exifkey, "exif:") || exifkey.length() < 6) continue;
+            int info = CPictureInfoTag::TranslateString(exifkey.substr(5));
             item->GetPictureInfoTag()->SetInfo(info, value);
-            pictureTagLoaded = true;
           }
         }
-        if (pictureTagLoaded)
-          item->GetPictureInfoTag()->SetLoaded(true);
       }
     } // end ListItem::setInfo
 
@@ -480,11 +491,10 @@ namespace XBMCAddon
     {
       LOCKGUI;
 
-      String tmp;
       if (strcmpi(cType, "video") == 0)
       {
         CStreamDetailVideo* video = new CStreamDetailVideo;
-        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); it++)
+        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it)
         {
           const String& key = it->first;
           const CStdString value(it->second.c_str());
@@ -499,13 +509,15 @@ namespace XBMCAddon
             video->m_iHeight = strtol(value, NULL, 10);
           else if (key == "duration")
             video->m_iDuration = strtol(value, NULL, 10);
+          else if (key == "stereomode")
+            video->m_strStereoMode = value;
         }
         item->GetVideoInfoTag()->m_streamDetails.AddStream(video);
       }
       else if (strcmpi(cType, "audio") == 0)
       {
         CStreamDetailAudio* audio = new CStreamDetailAudio;
-        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); it++)
+        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it)
         {
           const String& key = it->first;
           const String& value = it->second;
@@ -522,7 +534,7 @@ namespace XBMCAddon
       else if (strcmpi(cType, "subtitle") == 0)
       {
         CStreamDetailSubtitle* subtitle = new CStreamDetailSubtitle;
-        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); it++)
+        for (Dictionary::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it)
         {
           const String& key = it->first;
           const String& value = it->second;
@@ -538,7 +550,7 @@ namespace XBMCAddon
       throw (ListItemException)
     {
       int itemCount = 0;
-      for (std::vector<Tuple<String,String> >::const_iterator iter = items.begin(); iter < items.end(); iter++, itemCount++)
+      for (std::vector<Tuple<String,String> >::const_iterator iter = items.begin(); iter < items.end(); ++iter, ++itemCount)
       {
         Tuple<String,String> tuple = *iter;
         if (tuple.GetNumValuesSet() != 2)
@@ -548,10 +560,10 @@ namespace XBMCAddon
 
         LOCKGUI;
         CStdString property;
-        property.Format("contextmenulabel(%i)", itemCount);
+        property = StringUtils::Format("contextmenulabel(%i)", itemCount);
         item->SetProperty(property, uText);
 
-        property.Format("contextmenuaction(%i)", itemCount);
+        property = StringUtils::Format("contextmenuaction(%i)", itemCount);
         item->SetProperty(property, uAction);
       }
 

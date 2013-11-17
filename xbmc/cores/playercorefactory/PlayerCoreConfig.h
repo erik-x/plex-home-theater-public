@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2005-2012 Team XBMC
+ *      Copyright (C) 2005-2013 Team XBMC
  *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -24,13 +24,13 @@
 #include "PlayerCoreFactory.h"
 #include "cores/dvdplayer/DVDPlayer.h"
 #include "cores/paplayer/PAPlayer.h"
-#if defined(HAS_AMLPLAYER)
-#include "cores/amlplayer/AMLPlayer.h"
-#endif
 #if defined(HAS_OMXPLAYER)
 #include "cores/omxplayer/OMXPlayer.h"
 #endif
 #include "cores/ExternalPlayer/ExternalPlayer.h"
+#ifdef HAS_UPNP
+#include "network/upnp/UPnPPlayer.h"
+#endif
 #include "utils/log.h"
 
 class CPlayerCoreConfig
@@ -38,9 +38,10 @@ class CPlayerCoreConfig
 friend class CPlayerCoreFactory;
 
 public:
-  CPlayerCoreConfig(CStdString name, const EPLAYERCORES eCore, const TiXmlElement* pConfig)
+  CPlayerCoreConfig(CStdString name, const EPLAYERCORES eCore, const TiXmlElement* pConfig, const CStdString& id = "")
   {
     m_name = name;
+    m_id = id;
     m_eCore = eCore;
     m_bPlaysAudio = false;
     m_bPlaysVideo = false;
@@ -70,6 +71,16 @@ public:
     return m_name;
   }
 
+  const CStdString& GetId() const
+  {
+    return m_id;
+  }
+
+  const EPLAYERCORES& GetType() const
+  {
+    return m_eCore;
+  }
+
   IPlayer* CreatePlayer(IPlayerCallback& callback) const
   {
     IPlayer* pPlayer;
@@ -91,11 +102,11 @@ public:
       case EPC_PAPLAYER: pPlayer = new PAPlayer(callback); break;
 #endif
       case EPC_EXTPLAYER: pPlayer = new CExternalPlayer(callback); break;
-#if defined(HAS_AMLPLAYER)
-      case EPC_AMLPLAYER: pPlayer = new CAMLPlayer(callback); break;
-#endif
 #if defined(HAS_OMXPLAYER)
       case EPC_OMXPLAYER: pPlayer = new COMXPlayer(callback); break;
+#endif
+#if defined(HAS_UPNP)
+      case EPC_UPNPPLAYER: pPlayer = new UPNP::CUPnPPlayer(callback, m_id.c_str()); break;
 #endif
       default: return NULL;
     }
@@ -113,6 +124,7 @@ public:
 
 private:
   CStdString m_name;
+  CStdString m_id;
   bool m_bPlaysAudio;
   bool m_bPlaysVideo;
   EPLAYERCORES m_eCore;

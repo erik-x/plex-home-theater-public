@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- This file contains the mapping of keys (gamepad, remote, and keyboard) to actions within XBMC -->
 <!-- The <global> section is a fall through - they will only be used if the button is not          -->
 <!-- used in the current window's section.  Note that there is only handling                       -->
@@ -41,6 +42,7 @@
       <q>Queue</q>
       <f>FastForward</f>
       <r>Rewind</r>
+      <y>SwitchPlayer</y>
       <left>Left</left>
       <right>Right</right>
       <up>Up</up>
@@ -94,6 +96,8 @@
       <backslash>ToggleFullScreen</backslash>
       <home>FirstPage</home>
       <end>LastPage</end>
+      <power>ActivateWindow(shutdownmenu)</power>
+      <sleep>ActivateWindow(shutdownmenu)</sleep>
       <!-- PVR windows -->
       <e>XBMC.ActivateWindowAndFocus(MyPVR, 31,0, 10,0)</e>
       <h>XBMC.ActivateWindowAndFocus(MyPVR, 32,0, 11,0)</h>

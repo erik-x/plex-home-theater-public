@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,10 +19,10 @@
  */
 
 #include "GUITextBox.h"
-#include "utils/CharsetConverter.h"
 #include "GUIInfoManager.h"
 #include "utils/XBMCTinyXML.h"
 #include "utils/MathUtils.h"
+#include "utils/StringUtils.h"
 
 using namespace std;
 
@@ -30,6 +30,7 @@ CGUITextBox::CGUITextBox(int parentID, int controlID, float posX, float posY, fl
                          const CLabelInfo& labelInfo, int scrollTime)
     : CGUIControl(parentID, controlID, posX, posY, width, height)
     , CGUITextLayout(labelInfo.font, true)
+    , m_label(labelInfo)
 {
   m_offset = 0;
   m_scrollOffset = 0;
@@ -45,7 +46,6 @@ CGUITextBox::CGUITextBox(int parentID, int controlID, float posX, float posY, fl
   m_autoScrollDelay = 3000;
   m_autoScrollDelayTime = 0;
   m_autoScrollRepeatAnim = NULL;
-  m_label = labelInfo;
 }
 
 CGUITextBox::CGUITextBox(const CGUITextBox &from)
@@ -355,10 +355,10 @@ CStdString CGUITextBox::GetLabel(int info) const
   switch (info)
   {
   case CONTAINER_NUM_PAGES:
-    label.Format("%u", (GetRows() + m_itemsPerPage - 1) / m_itemsPerPage);
+    label = StringUtils::Format("%u", (GetRows() + m_itemsPerPage - 1) / m_itemsPerPage);
     break;
   case CONTAINER_CURRENT_PAGE:
-    label.Format("%u", GetCurrentPage());
+    label = StringUtils::Format("%u", GetCurrentPage());
     break;
   default:
     break;

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <includes>
 	<include name="Weather10DayForcast">
 		<control type="group">
@@ -5,8 +6,8 @@
 			<include>VisibleFadeEffect</include>
 			<control type="label">
 				<description>header label</description>
-				<posx>20</posx>
-				<posy>13</posy>
+				<left>20</left>
+				<top>13</top>
 				<width>610</width>
 				<height>30</height>
 				<font>font13_title</font>
@@ -17,8 +18,8 @@
 				<shadowcolor>black</shadowcolor>
 			</control>
 			<control type="list" id="51">
-				<posx>15</posx>
-				<posy>60</posy>
+				<left>15</left>
+				<top>60</top>
 				<width>600</width>
 				<height>541</height>
 				<onleft>9000</onleft>
@@ -30,15 +31,15 @@
 				<scrolltime>200</scrolltime>
 				<itemlayout height="135" width="600">
 					<control type="image">
-						<posx>0</posx>
-						<posy>0</posy>
+						<left>0</left>
+						<top>0</top>
 						<width>600</width>
 						<height>136</height>
 						<texture border="0,5,0,5">MenuItemNF.png</texture>
 					</control>
 					<control type="label">
-						<posx>50</posx>
-						<posy>0</posy>
+						<left>50</left>
+						<top>0</top>
 						<width>100</width>
 						<height>120</height>
 						<font>font12</font>
@@ -49,16 +50,16 @@
 						<label>$INFO[ListItem.Label]</label>
 					</control>
 					<control type="image">
-						<posx>110</posx>
-						<posy>5</posy>
+						<left>110</left>
+						<top>5</top>
 						<width>80</width>
 						<height>80</height>
 						<aspectratio>keep</aspectratio>
 						<texture>$INFO[ListItem.Thumb]</texture>
 					</control>
 					<control type="label">
-						<posx>590</posx>
-						<posy>0</posy>
+						<left>590</left>
+						<top>0</top>
 						<width>390</width>
 						<height>70</height>
 						<font>font12</font>
@@ -69,8 +70,8 @@
 						<label>$INFO[ListItem.Label2]</label>
 					</control>
 					<control type="textbox">
-						<posx>0</posx>
-						<posy>80</posy>
+						<left>0</left>
+						<top>80</top>
 						<width>590</width>
 						<height>50</height>
 						<font>font12</font>
@@ -82,8 +83,8 @@
 				</itemlayout>
 				<focusedlayout height="135" width="600">
 					<control type="image">
-						<posx>0</posx>
-						<posy>0</posy>
+						<left>0</left>
+						<top>0</top>
 						<width>600</width>
 						<height>136</height>
 						<texture border="0,2,0,2">MenuItemNF.png</texture>
@@ -91,8 +92,8 @@
 						<include>VisibleFadeEffect</include>
 					</control>
 					<control type="image">
-						<posx>0</posx>
-						<posy>0</posy>
+						<left>0</left>
+						<top>0</top>
 						<width>600</width>
 						<height>136</height>
 						<texture border="10">button-focus2.png</texture>
@@ -100,8 +101,8 @@
 						<include>VisibleFadeEffect</include>
 					</control>
 					<control type="label">
-						<posx>50</posx>
-						<posy>0</posy>
+						<left>50</left>
+						<top>0</top>
 						<width>100</width>
 						<height>120</height>
 						<font>font12</font>
@@ -112,16 +113,16 @@
 						<label>$INFO[ListItem.Label]</label>
 					</control>
 					<control type="image">
-						<posx>110</posx>
-						<posy>5</posy>
+						<left>110</left>
+						<top>5</top>
 						<width>80</width>
 						<height>80</height>
 						<aspectratio>keep</aspectratio>
 						<texture>$INFO[ListItem.Thumb]</texture>
 					</control>
 					<control type="label">
-						<posx>590</posx>
-						<posy>0</posy>
+						<left>590</left>
+						<top>0</top>
 						<width>390</width>
 						<height>70</height>
 						<font>font12</font>
@@ -132,8 +133,8 @@
 						<label>$INFO[ListItem.Label2]</label>
 					</control>
 					<control type="textbox">
-						<posx>0</posx>
-						<posy>80</posy>
+						<left>0</left>
+						<top>80</top>
 						<width>590</width>
 						<height>50</height>
 						<font>font12</font>
@@ -146,7 +147,7 @@
 				<content>
 					<item>
 						<icon>$LOCALIZE[31909]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -154,7 +155,7 @@
 						<label2>$INFO[Window.Property(Daily.1.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.1.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.1.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.1.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.1.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.1.WindSpeed)] $INFO[Window.Property(Daily.1.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -162,7 +163,7 @@
 						<label2>$INFO[Window.Property(Daily.2.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.2.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.2.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.2.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.2.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.2.WindSpeed)] $INFO[Window.Property(Daily.2.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -170,7 +171,7 @@
 						<label2>$INFO[Window.Property(Daily.3.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.3.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.3.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.3.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.3.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.3.WindSpeed)] $INFO[Window.Property(Daily.3.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -178,7 +179,7 @@
 						<label2>$INFO[Window.Property(Daily.4.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.4.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.4.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.4.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.4.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.4.WindSpeed)] $INFO[Window.Property(Daily.4.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -186,7 +187,7 @@
 						<label2>$INFO[Window.Property(Daily.5.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.5.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.5.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.5.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.5.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.5.WindSpeed)] $INFO[Window.Property(Daily.5.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -194,7 +195,7 @@
 						<label2>$INFO[Window.Property(Daily.6.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.6.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.6.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.6.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.6.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.6.WindSpeed)] $INFO[Window.Property(Daily.6.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -202,7 +203,7 @@
 						<label2>$INFO[Window.Property(Daily.7.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.7.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.7.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.7.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.7.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.7.WindSpeed)] $INFO[Window.Property(Daily.7.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -210,7 +211,7 @@
 						<label2>$INFO[Window.Property(Daily.8.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.8.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.8.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.8.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.8.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.8.WindSpeed)] $INFO[Window.Property(Daily.8.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -218,7 +219,7 @@
 						<label2>$INFO[Window.Property(Daily.9.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.9.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.9.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.9.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.9.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.9.WindSpeed)] $INFO[Window.Property(Daily.9.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 					<item>
@@ -226,14 +227,14 @@
 						<label2>$INFO[Window.Property(Daily.10.HighTemperature),[COLOR=grey2]$LOCALIZE[419] :[/COLOR][B] ,[/B]]  $INFO[Window.Property(Daily.10.LowTemperature),[COLOR=grey2]$LOCALIZE[418] :[/COLOR][B] ,[/B]][CR]$INFO[Window.Property(Daily.10.Precipitation),[COLOR=grey2]$LOCALIZE[33022] :[/COLOR][B] ,[/B]]</label2>
 						<thumb>$INFO[Window.Property(Daily.10.OutlookIcon)]</thumb>
 						<icon>$INFO[Window.Property(Daily.10.Outlook),[COLOR=grey2]$LOCALIZE[33030]: [/COLOR]][CR][COLOR=grey2]$LOCALIZE[383]: [/COLOR]$INFO[Window.Property(Daily.10.WindSpeed)] $INFO[Window.Property(Daily.10.WindDirection)]</icon>
-						<onclick>-</onclick>
+						<onclick>noop</onclick>
 						<visible>!IsEmpty(Window.Property(Daily.IsFetched))</visible>
 					</item>
 				</content>
 			</control>
 			<control type="scrollbar" id="61">
-				<posx>615</posx>
-				<posy>60</posy>
+				<left>615</left>
+				<top>60</top>
 				<width>25</width>
 				<height>540</height>
 				<texturesliderbackground border="0,14,0,14">ScrollBarV.png</texturesliderbackground>
@@ -250,8 +251,8 @@
 			<control type="label">
 				<animation effect="slide" start="0,0" end="-90,0" time="0" condition="system.getbool(input.enablemouse)">Conditional</animation>
 				<description>number of files/pages</description>
-				<posx>660</posx>
-				<posy>627</posy>
+				<right>660</right>
+				<top>627</top>
 				<width>570</width>
 				<font>font12</font>
 				<align>right</align>

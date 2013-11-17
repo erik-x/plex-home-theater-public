@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -62,11 +62,7 @@ public:
     return m_value;
   }
 
-  bool operator==(const InfoBool &right) const
-  {
-    return (m_context == right.m_context && 
-            m_expression.CompareNoCase(right.m_expression) == 0);
-  }
+  bool operator==(const InfoBool &right) const;
 
   /*! \brief Update the value of this info bool
    This is called if and only if the info bool is dirty, allowing it to update it's current value

@@ -1,6 +1,6 @@
 /*
- *      Copyright (C) 2005-2012 Team XBMC
- *      http://www.xbmc.org
+ *      Copyright (C) 2005-2013 Team XBMC
+ *      http://xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,9 +24,10 @@
 #include "guilib/GUIWindowManager.h"
 #include "log.h"
 #include "utils/TimeUtils.h"
+#include "utils/StringUtils.h"
 #include "URL.h"
 
-CAsyncFileCopy::CAsyncFileCopy() : CThread("CAsyncFileCopy")
+CAsyncFileCopy::CAsyncFileCopy() : CThread("AsyncFileCopy")
 {
   m_cancelled = false;
   m_succeeded = false;
@@ -74,8 +75,7 @@ bool CAsyncFileCopy::Copy(const CStdString &from, const CStdString &to, const CS
     // and update the dialog as we go
     if (dlg && dlg->IsDialogRunning())
     {
-      CStdString speedString;
-      speedString.Format("%2.2f KB/s", m_speed / 1024);
+      CStdString speedString = StringUtils::Format("%2.2f KB/s", m_speed / 1024);
       dlg->SetHeading(heading);
       dlg->SetLine(0, url1.Get());
       dlg->SetLine(1, url2.Get());
